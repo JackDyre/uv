@@ -10,7 +10,7 @@ use tracing::debug;
 use uv_cache::Cache;
 use uv_client::Connectivity;
 use uv_configuration::{
-    Concurrency, DevGroupsManifest, EditableMode, ExtrasSpecification, InstallOptions, LowerBound,
+    Concurrency, DevGroupsSpecification, DryRun, EditableMode, ExtrasSpecification, InstallOptions,
     PreviewMode, TrustedHost,
 };
 use uv_fs::Simplified;
@@ -31,7 +31,8 @@ use crate::commands::project::install_target::InstallTarget;
 use crate::commands::project::lock::LockMode;
 use crate::commands::project::lock_target::LockTarget;
 use crate::commands::project::{
-    default_dependency_groups, ProjectError, ProjectInterpreter, ScriptInterpreter, UniversalState,
+    default_dependency_groups, ProjectEnvironment, ProjectError, ProjectInterpreter,
+    ScriptInterpreter, UniversalState,
 };
 use crate::commands::{diagnostics, project, ExitStatus};
 use crate::printer::Printer;
@@ -43,6 +44,7 @@ pub(crate) async fn remove(
     project_dir: &Path,
     locked: bool,
     frozen: bool,
+    active: Option<bool>,
     no_sync: bool,
     packages: Vec<PackageName>,
     dependency_type: DependencyType,
@@ -209,6 +211,7 @@ pub(crate) async fn remove(
                     allow_insecure_host,
                     &install_mirrors,
                     no_config,
+                    active,
                     cache,
                     printer,
                 )
@@ -218,7 +221,7 @@ pub(crate) async fn remove(
                 AddTarget::Project(project, Box::new(PythonTarget::Interpreter(interpreter)))
             } else {
                 // Discover or create the virtual environment.
-                let venv = project::get_or_init_environment(
+                let environment = ProjectEnvironment::get_or_init(
                     project.workspace(),
                     python.as_deref().map(PythonRequest::parse),
                     &install_mirrors,
@@ -228,12 +231,15 @@ pub(crate) async fn remove(
                     native_tls,
                     allow_insecure_host,
                     no_config,
+                    active,
                     cache,
+                    DryRun::Disabled,
                     printer,
                 )
-                .await?;
+                .await?
+                .into_environment()?;
 
-                AddTarget::Project(project, Box::new(PythonTarget::Environment(venv)))
+                AddTarget::Project(project, Box::new(PythonTarget::Environment(environment)))
             }
         }
         RemoveTarget::Script(script) => {
@@ -247,6 +253,7 @@ pub(crate) async fn remove(
                 allow_insecure_host,
                 &install_mirrors,
                 no_config,
+                active,
                 cache,
                 printer,
             )
@@ -272,7 +279,6 @@ pub(crate) async fn remove(
         mode,
         (&target).into(),
         settings.as_ref().into(),
-        LowerBound::Allow,
         &state,
         Box::new(DefaultResolveLogger),
         connectivity,
@@ -331,7 +337,7 @@ pub(crate) async fn remove(
         target,
         venv,
         &extras,
-        &DevGroupsManifest::from_defaults(defaults),
+        &DevGroupsSpecification::default().with_defaults(defaults),
         EditableMode::Editable,
         install_options,
         Modifications::Exact,
@@ -344,6 +350,7 @@ pub(crate) async fn remove(
         native_tls,
         allow_insecure_host,
         cache,
+        DryRun::Disabled,
         printer,
         preview,
     )

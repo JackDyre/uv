@@ -33,7 +33,7 @@ use uv_static::EnvVars;
 use uv_warnings::{warn_user, warn_user_once};
 use uv_workspace::{DiscoveryOptions, Workspace};
 
-use crate::commands::{ExitStatus, RunCommand, ToolRunCommand};
+use crate::commands::{ExitStatus, RunCommand, ScriptPath, ToolRunCommand};
 use crate::printer::Printer;
 use crate::settings::{
     CacheSettings, GlobalSettings, PipCheckSettings, PipCompileSettings, PipFreezeSettings,
@@ -178,9 +178,9 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                     Err(Pep723Error::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => None,
                     Err(err) => return Err(err.into()),
                 },
-                Some(RunCommand::PythonRemote(script, _)) => {
+                Some(RunCommand::PythonRemote(url, script, _)) => {
                     match Pep723Metadata::read(&script).await {
-                        Ok(Some(metadata)) => Some(Pep723Item::Remote(metadata)),
+                        Ok(Some(metadata)) => Some(Pep723Item::Remote(metadata, url.clone())),
                         Ok(None) => None,
                         Err(Pep723Error::Io(err)) if err.kind() == std::io::ErrorKind::NotFound => {
                             None
@@ -193,11 +193,26 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                 ) => Pep723Metadata::parse(contents)?.map(Pep723Item::Stdin),
                 _ => None,
             },
-            ProjectCommand::Remove(uv_cli::RemoveArgs {
+            // For `uv add --script` and `uv lock --script`, we'll create a PEP 723 tag if it
+            // doesn't already exist.
+            ProjectCommand::Add(uv_cli::AddArgs {
                 script: Some(script),
                 ..
             })
             | ProjectCommand::Lock(uv_cli::LockArgs {
+                script: Some(script),
+                ..
+            }) => match Pep723Script::read(&script).await {
+                Ok(Some(script)) => Some(Pep723Item::Script(script)),
+                Ok(None) => None,
+                Err(err) => return Err(err.into()),
+            },
+            // For the remaining commands, the PEP 723 tag must exist already.
+            ProjectCommand::Remove(uv_cli::RemoveArgs {
+                script: Some(script),
+                ..
+            })
+            | ProjectCommand::Sync(uv_cli::SyncArgs {
                 script: Some(script),
                 ..
             })
@@ -211,8 +226,6 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
             }) => match Pep723Script::read(&script).await {
                 Ok(Some(script)) => Some(Pep723Item::Script(script)),
                 Ok(None) => {
-                    // TODO(charlie): `uv lock --script` should initialize the tag, if it doesn't
-                    // exist.
                     bail!(
                         "`{}` does not contain a PEP 723 metadata tag; run `{}` to initialize the script",
                         script.user_display().cyan(),
@@ -385,6 +398,7 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                 &build_constraints,
                 args.constraints_from_workspace,
                 args.overrides_from_workspace,
+                args.build_constraints_from_workspace,
                 args.environments,
                 args.settings.extras,
                 args.settings.groups,
@@ -523,17 +537,18 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            let requirements = args
-                .package
-                .into_iter()
-                .map(RequirementsSource::from_package)
-                .chain(args.editables.into_iter().map(RequirementsSource::Editable))
-                .chain(
-                    args.requirements
-                        .into_iter()
-                        .map(RequirementsSource::from_requirements_file),
-                )
-                .collect::<Vec<_>>();
+            let mut requirements = Vec::with_capacity(
+                args.package.len() + args.editables.len() + args.requirements.len(),
+            );
+            for package in args.package {
+                requirements.push(RequirementsSource::from_package(package)?);
+            }
+            requirements.extend(args.editables.into_iter().map(RequirementsSource::Editable));
+            requirements.extend(
+                args.requirements
+                    .into_iter()
+                    .map(RequirementsSource::from_requirements_file),
+            );
             let constraints = args
                 .constraints
                 .into_iter()
@@ -557,6 +572,7 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                 &build_constraints,
                 args.constraints_from_workspace,
                 args.overrides_from_workspace,
+                args.build_constraints_from_workspace,
                 &args.settings.extras,
                 &args.settings.groups,
                 args.settings.resolution,
@@ -609,16 +625,15 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
             // Initialize the cache.
             let cache = cache.init()?;
 
-            let sources = args
-                .package
-                .into_iter()
-                .map(RequirementsSource::from_package)
-                .chain(
-                    args.requirements
-                        .into_iter()
-                        .map(RequirementsSource::from_requirements_txt),
-                )
-                .collect::<Vec<_>>();
+            let mut sources = Vec::with_capacity(args.package.len() + args.requirements.len());
+            for package in args.package {
+                sources.push(RequirementsSource::from_package(package)?);
+            }
+            sources.extend(
+                args.requirements
+                    .into_iter()
+                    .map(RequirementsSource::from_requirements_file),
+            );
             commands::pip_uninstall(
                 &sources,
                 args.settings.python,
@@ -970,21 +985,22 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            let requirements = args
-                .with
-                .into_iter()
-                .map(RequirementsSource::from_with_package)
-                .chain(
-                    args.with_editable
-                        .into_iter()
-                        .map(RequirementsSource::Editable),
-                )
-                .chain(
-                    args.with_requirements
-                        .into_iter()
-                        .map(RequirementsSource::from_requirements_file),
-                )
-                .collect::<Vec<_>>();
+            let mut requirements = Vec::with_capacity(
+                args.with.len() + args.with_editable.len() + args.with_requirements.len(),
+            );
+            for package in args.with {
+                requirements.push(RequirementsSource::from_with_package(package)?);
+            }
+            requirements.extend(
+                args.with_editable
+                    .into_iter()
+                    .map(RequirementsSource::Editable),
+            );
+            requirements.extend(
+                args.with_requirements
+                    .into_iter()
+                    .map(RequirementsSource::from_requirements_file),
+            );
 
             Box::pin(commands::tool_run(
                 args.command,
@@ -1023,21 +1039,23 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            let requirements = args
-                .with
-                .into_iter()
-                .map(RequirementsSource::from_with_package)
-                .chain(
-                    args.with_editable
-                        .into_iter()
-                        .map(RequirementsSource::Editable),
-                )
-                .chain(
-                    args.with_requirements
-                        .into_iter()
-                        .map(RequirementsSource::from_requirements_file),
-                )
-                .collect::<Vec<_>>();
+            let mut requirements = Vec::with_capacity(
+                args.with.len() + args.with_editable.len() + args.with_requirements.len(),
+            );
+            for package in args.with {
+                requirements.push(RequirementsSource::from_with_package(package)?);
+            }
+            requirements.extend(
+                args.with_editable
+                    .into_iter()
+                    .map(RequirementsSource::Editable),
+            );
+            requirements.extend(
+                args.with_requirements
+                    .into_iter()
+                    .map(RequirementsSource::from_requirements_file),
+            );
+
             let constraints = args
                 .constraints
                 .into_iter()
@@ -1265,10 +1283,6 @@ async fn run(mut cli: Cli) -> Result<ExitStatus> {
         Commands::Publish(args) => {
             show_settings!(args);
 
-            if globals.preview.is_disabled() {
-                warn_user_once!("`uv publish` is experimental and may change without warning");
-            }
-
             if args.skip_existing {
                 bail!(
                     "`uv publish` does not support `--skip-existing` because there is not a \
@@ -1405,11 +1419,6 @@ async fn run_project(
                 return Ok(ExitStatus::Success);
             }
         };
-        ($arg:expr, false) => {
-            if globals.show_settings {#
-                writeln!(printer.stdout(), "{:#?}", $arg)?;
-            }
-        };
     }
 
     match *project_command {
@@ -1427,12 +1436,14 @@ async fn run_project(
                 args.name,
                 args.package,
                 args.kind,
+                args.bare,
                 args.description,
+                args.no_description,
                 args.vcs,
                 args.build_backend,
                 args.no_readme,
                 args.author_from,
-                args.no_pin_python,
+                args.pin_python,
                 args.python,
                 args.install_mirrors,
                 args.no_workspace,
@@ -1460,21 +1471,22 @@ async fn run_project(
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            let requirements = args
-                .with
-                .into_iter()
-                .map(RequirementsSource::from_with_package)
-                .chain(
-                    args.with_editable
-                        .into_iter()
-                        .map(RequirementsSource::Editable),
-                )
-                .chain(
-                    args.with_requirements
-                        .into_iter()
-                        .map(RequirementsSource::from_requirements_file),
-                )
-                .collect::<Vec<_>>();
+            let mut requirements = Vec::with_capacity(
+                args.with.len() + args.with_editable.len() + args.with_requirements.len(),
+            );
+            for package in args.with {
+                requirements.push(RequirementsSource::from_with_package(package)?);
+            }
+            requirements.extend(
+                args.with_editable
+                    .into_iter()
+                    .map(RequirementsSource::Editable),
+            );
+            requirements.extend(
+                args.with_requirements
+                    .into_iter()
+                    .map(RequirementsSource::from_requirements_file),
+            );
 
             Box::pin(commands::run(
                 project_dir,
@@ -1484,6 +1496,7 @@ async fn run_project(
                 args.show_resolution || globals.verbose > 0,
                 args.locked,
                 args.frozen,
+                args.active,
                 args.no_sync,
                 args.isolated,
                 args.all_packages,
@@ -1509,6 +1522,7 @@ async fn run_project(
                 args.env_file,
                 args.no_env_file,
                 globals.preview,
+                args.max_recursion_depth,
             ))
             .await
         }
@@ -1524,10 +1538,19 @@ async fn run_project(
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            commands::sync(
+            // Unwrap the script.
+            let script = script.map(|script| match script {
+                Pep723Item::Script(script) => script,
+                Pep723Item::Stdin(..) => unreachable!("`uv lock` does not support stdin"),
+                Pep723Item::Remote(..) => unreachable!("`uv lock` does not support remote files"),
+            });
+
+            Box::pin(commands::sync(
                 project_dir,
                 args.locked,
                 args.frozen,
+                args.dry_run,
+                args.active,
                 args.all_packages,
                 args.package,
                 args.extras,
@@ -1540,6 +1563,7 @@ async fn run_project(
                 globals.python_preference,
                 globals.python_downloads,
                 args.settings,
+                script,
                 globals.installer_metadata,
                 globals.connectivity,
                 globals.concurrency,
@@ -1549,7 +1573,7 @@ async fn run_project(
                 &cache,
                 printer,
                 globals.preview,
-            )
+            ))
             .await
         }
         ProjectCommand::Lock(args) => {
@@ -1563,12 +1587,18 @@ async fn run_project(
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
-            // Unwrap the script.
-            let script = script.map(|script| match script {
-                Pep723Item::Script(script) => script,
-                Pep723Item::Stdin(_) => unreachable!("`uv lock` does not support stdin"),
-                Pep723Item::Remote(_) => unreachable!("`uv lock` does not support remote files"),
-            });
+            // If the script already exists, use it; otherwise, propagate the file path and we'll
+            // initialize it later on.
+            let script = script
+                .map(|script| match script {
+                    Pep723Item::Script(script) => script,
+                    Pep723Item::Stdin(..) => unreachable!("`uv add` does not support stdin"),
+                    Pep723Item::Remote(..) => {
+                        unreachable!("`uv add` does not support remote files")
+                    }
+                })
+                .map(ScriptPath::Script)
+                .or(args.script.map(ScriptPath::Path));
 
             Box::pin(commands::lock(
                 project_dir,
@@ -1604,6 +1634,19 @@ async fn run_project(
                     .combine(Refresh::from(args.settings.upgrade.clone())),
             );
 
+            // If the script already exists, use it; otherwise, propagate the file path and we'll
+            // initialize it later on.
+            let script = script
+                .map(|script| match script {
+                    Pep723Item::Script(script) => script,
+                    Pep723Item::Stdin(..) => unreachable!("`uv add` does not support stdin"),
+                    Pep723Item::Remote(..) => {
+                        unreachable!("`uv add` does not support remote files")
+                    }
+                })
+                .map(ScriptPath::Script)
+                .or(args.script.map(ScriptPath::Path));
+
             let requirements = args
                 .packages
                 .into_iter()
@@ -1619,6 +1662,7 @@ async fn run_project(
                 project_dir,
                 args.locked,
                 args.frozen,
+                args.active,
                 args.no_sync,
                 requirements,
                 args.editable,
@@ -1633,7 +1677,7 @@ async fn run_project(
                 args.python,
                 args.install_mirrors,
                 args.settings,
-                args.script,
+                script,
                 globals.python_preference,
                 globals.python_downloads,
                 globals.installer_metadata,
@@ -1663,14 +1707,15 @@ async fn run_project(
             // Unwrap the script.
             let script = script.map(|script| match script {
                 Pep723Item::Script(script) => script,
-                Pep723Item::Stdin(_) => unreachable!("`uv remove` does not support stdin"),
-                Pep723Item::Remote(_) => unreachable!("`uv remove` does not support remote files"),
+                Pep723Item::Stdin(..) => unreachable!("`uv remove` does not support stdin"),
+                Pep723Item::Remote(..) => unreachable!("`uv remove` does not support remote files"),
             });
 
             Box::pin(commands::remove(
                 project_dir,
                 args.locked,
                 args.frozen,
+                args.active,
                 args.no_sync,
                 args.packages,
                 args.dependency_type,
@@ -1704,8 +1749,8 @@ async fn run_project(
             // Unwrap the script.
             let script = script.map(|script| match script {
                 Pep723Item::Script(script) => script,
-                Pep723Item::Stdin(_) => unreachable!("`uv tree` does not support stdin"),
-                Pep723Item::Remote(_) => unreachable!("`uv tree` does not support remote files"),
+                Pep723Item::Stdin(..) => unreachable!("`uv tree` does not support stdin"),
+                Pep723Item::Remote(..) => unreachable!("`uv tree` does not support remote files"),
             });
 
             Box::pin(commands::tree(
@@ -1750,8 +1795,8 @@ async fn run_project(
             // Unwrap the script.
             let script = script.map(|script| match script {
                 Pep723Item::Script(script) => script,
-                Pep723Item::Stdin(_) => unreachable!("`uv export` does not support stdin"),
-                Pep723Item::Remote(_) => unreachable!("`uv export` does not support remote files"),
+                Pep723Item::Stdin(..) => unreachable!("`uv export` does not support stdin"),
+                Pep723Item::Remote(..) => unreachable!("`uv export` does not support remote files"),
             });
 
             commands::export(
@@ -1793,16 +1838,35 @@ async fn run_project(
 
 /// The main entry point for a uv invocation.
 ///
-/// WARNING: This entry point is not recommended for external consumption, the
-/// uv binary interface is the official public API. When using this entry
-/// point, uv assumes it is running in a process it controls and that the
-/// entire process lifetime is managed by uv. Unexpected behavior may be
-/// encountered if this entry point is called multiple times in a single process.
-pub fn main<I, T>(args: I) -> ExitCode
+/// # Usage
+///
+/// This entry point is not recommended for external consumption, the uv binary interface is the
+/// official public API.
+///
+/// When using this entry point, uv assumes it is running in a process it controls and that the
+/// entire process lifetime is managed by uv. Unexpected behavior may be encountered if this entry
+/// point is called multiple times in a single process.
+///
+/// # Safety
+///
+/// It is only safe to call this routine when it is known that multiple threads are not running.
+#[allow(unsafe_code)]
+pub unsafe fn main<I, T>(args: I) -> ExitCode
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
+    // Set the `UV` variable to the current executable so it is implicitly propagated to all child
+    // processes, e.g., in `uv run`.
+    if let Ok(current_exe) = std::env::current_exe() {
+        // SAFETY: The proof obligation must be satisfied by the caller.
+        unsafe {
+            // This will become unsafe in Rust 2024
+            // See https://doc.rust-lang.org/std/env/fn.set_var.html#safety
+            std::env::set_var(EnvVars::UV, current_exe);
+        }
+    }
+
     // `std::env::args` is not `Send` so we parse before passing to our runtime
     // https://github.com/rust-lang/rust/pull/48005
     let cli = match Cli::try_parse_from(args) {

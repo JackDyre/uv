@@ -10,9 +10,9 @@ use rustc_hash::{FxBuildHasher, FxHashMap};
 use tracing::debug;
 
 use uv_cache::Cache;
-use uv_client::{Connectivity, FlatIndexClient, RegistryClientBuilder};
+use uv_client::{BaseClientBuilder, Connectivity, FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
-    Concurrency, Constraints, DevGroupsSpecification, ExtrasSpecification, LowerBound, PreviewMode,
+    Concurrency, Constraints, DevGroupsSpecification, DryRun, ExtrasSpecification, PreviewMode,
     Reinstall, TrustedHost, Upgrade,
 };
 use uv_dispatch::BuildDispatch;
@@ -41,10 +41,11 @@ use uv_workspace::{DiscoveryOptions, Workspace, WorkspaceMember};
 use crate::commands::pip::loggers::{DefaultResolveLogger, ResolveLogger, SummaryResolveLogger};
 use crate::commands::project::lock_target::LockTarget;
 use crate::commands::project::{
-    ProjectError, ProjectInterpreter, ScriptInterpreter, UniversalState,
+    init_script_python_requirement, ProjectError, ProjectInterpreter, ScriptInterpreter,
+    UniversalState,
 };
-use crate::commands::reporters::ResolverReporter;
-use crate::commands::{diagnostics, pip, ExitStatus};
+use crate::commands::reporters::{PythonDownloadReporter, ResolverReporter};
+use crate::commands::{diagnostics, pip, ExitStatus, ScriptPath};
 use crate::printer::Printer;
 use crate::settings::{ResolverSettings, ResolverSettingsRef};
 
@@ -79,11 +80,11 @@ pub(crate) async fn lock(
     project_dir: &Path,
     locked: bool,
     frozen: bool,
-    dry_run: bool,
+    dry_run: DryRun,
     python: Option<String>,
     install_mirrors: PythonInstallMirrors,
     settings: ResolverSettings,
-    script: Option<Pep723Script>,
+    script: Option<ScriptPath>,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     connectivity: Connectivity,
@@ -95,6 +96,33 @@ pub(crate) async fn lock(
     printer: Printer,
     preview: PreviewMode,
 ) -> anyhow::Result<ExitStatus> {
+    // If necessary, initialize the PEP 723 script.
+    let script = match script {
+        Some(ScriptPath::Path(path)) => {
+            let client_builder = BaseClientBuilder::new()
+                .connectivity(connectivity)
+                .native_tls(native_tls)
+                .allow_insecure_host(allow_insecure_host.to_vec());
+            let reporter = PythonDownloadReporter::single(printer);
+            let requires_python = init_script_python_requirement(
+                python.as_deref(),
+                &install_mirrors,
+                project_dir,
+                false,
+                python_preference,
+                python_downloads,
+                no_config,
+                &client_builder,
+                cache,
+                &reporter,
+            )
+            .await?;
+            Some(Pep723Script::init(&path, requires_python.specifiers()).await?)
+        }
+        Some(ScriptPath::Script(script)) => Some(script),
+        None => None,
+    };
+
     // Find the project requirements.
     let workspace;
     let target = if let Some(script) = script.as_ref() {
@@ -121,6 +149,7 @@ pub(crate) async fn lock(
                 allow_insecure_host,
                 &install_mirrors,
                 no_config,
+                Some(false),
                 cache,
                 printer,
             )
@@ -136,6 +165,7 @@ pub(crate) async fn lock(
                 allow_insecure_host,
                 &install_mirrors,
                 no_config,
+                Some(false),
                 cache,
                 printer,
             )
@@ -145,7 +175,7 @@ pub(crate) async fn lock(
 
         if locked {
             LockMode::Locked(&interpreter)
-        } else if dry_run {
+        } else if dry_run.enabled() {
             LockMode::DryRun(&interpreter)
         } else {
             LockMode::Write(&interpreter)
@@ -160,7 +190,6 @@ pub(crate) async fn lock(
         mode,
         target,
         settings.as_ref(),
-        LowerBound::Warn,
         &state,
         Box::new(DefaultResolveLogger),
         connectivity,
@@ -174,12 +203,15 @@ pub(crate) async fn lock(
     .await
     {
         Ok(lock) => {
-            if dry_run {
-                let changed = if let LockResult::Changed(previous, lock) = &lock {
-                    report_upgrades(previous.as_ref(), lock, printer, dry_run)?
-                } else {
-                    false
-                };
+            if dry_run.enabled() {
+                // In `--dry-run` mode, show all changes.
+                let mut changed = false;
+                if let LockResult::Changed(previous, lock) = &lock {
+                    for event in LockEvent::detect_changes(previous.as_ref(), lock, dry_run) {
+                        changed = true;
+                        writeln!(printer.stderr(), "{event}")?;
+                    }
+                }
                 if !changed {
                     writeln!(
                         printer.stderr(),
@@ -189,7 +221,9 @@ pub(crate) async fn lock(
                 }
             } else {
                 if let LockResult::Changed(Some(previous), lock) = &lock {
-                    report_upgrades(Some(previous), lock, printer, dry_run)?;
+                    for event in LockEvent::detect_changes(Some(previous), lock, dry_run) {
+                        writeln!(printer.stderr(), "{event}")?;
+                    }
                 }
             }
 
@@ -222,7 +256,6 @@ pub(super) async fn do_safe_lock(
     mode: LockMode<'_>,
     target: LockTarget<'_>,
     settings: ResolverSettingsRef<'_>,
-    bounds: LowerBound,
     state: &UniversalState,
     logger: Box<dyn ResolveLogger>,
     connectivity: Connectivity,
@@ -255,7 +288,6 @@ pub(super) async fn do_safe_lock(
                 interpreter,
                 Some(existing),
                 settings,
-                bounds,
                 state,
                 logger,
                 connectivity,
@@ -295,7 +327,6 @@ pub(super) async fn do_safe_lock(
                 interpreter,
                 existing,
                 settings,
-                bounds,
                 state,
                 logger,
                 connectivity,
@@ -326,7 +357,6 @@ async fn do_lock(
     interpreter: &Interpreter,
     existing_lock: Option<Lock>,
     settings: ResolverSettingsRef<'_>,
-    bounds: LowerBound,
     state: &UniversalState,
     logger: Box<dyn ResolveLogger>,
     connectivity: Connectivity,
@@ -364,6 +394,7 @@ async fn do_lock(
     let requirements = target.requirements();
     let overrides = target.overrides();
     let constraints = target.constraints();
+    let build_constraints = target.build_constraints();
     let dependency_groups = target.dependency_groups()?;
     let source_trees = vec![];
 
@@ -371,6 +402,7 @@ async fn do_lock(
     let requirements = target.lower(requirements, index_locations, sources)?;
     let overrides = target.lower(overrides, index_locations, sources)?;
     let constraints = target.lower(constraints, index_locations, sources)?;
+    let build_constraints = target.lower(build_constraints, index_locations, sources)?;
     let dependency_groups = dependency_groups
         .into_iter()
         .map(|(name, requirements)| {
@@ -416,6 +448,41 @@ async fn do_lock(
         }
 
         environments
+    };
+
+    // Collect the list of required platforms.
+    let required_environments = if let Some(required_environments) = target.required_environments()
+    {
+        // Ensure that the environments are disjoint.
+        for (lhs, rhs) in required_environments
+            .as_markers()
+            .iter()
+            .zip(required_environments.as_markers().iter().skip(1))
+        {
+            if !lhs.is_disjoint(*rhs) {
+                let mut hint = lhs.negate();
+                hint.and(*rhs);
+
+                let lhs = lhs
+                    .contents()
+                    .map(|contents| contents.to_string())
+                    .unwrap_or_else(|| "true".to_string());
+                let rhs = rhs
+                    .contents()
+                    .map(|contents| contents.to_string())
+                    .unwrap_or_else(|| "true".to_string());
+                let hint = hint
+                    .contents()
+                    .map(|contents| contents.to_string())
+                    .unwrap_or_else(|| "true".to_string());
+
+                return Err(ProjectError::OverlappingMarkers(lhs, rhs, hint));
+            }
+        }
+
+        Some(required_environments)
+    } else {
+        None
     };
 
     // Determine the supported Python range. If no range is defined, and warn and default to the
@@ -515,12 +582,14 @@ async fn do_lock(
         .exclude_newer(exclude_newer)
         .index_strategy(index_strategy)
         .build_options(build_options.clone())
+        .required_environments(required_environments.cloned().unwrap_or_default())
         .build();
     let hasher = HashStrategy::Generate(HashGeneration::Url);
 
+    let build_constraints = Constraints::from_requirements(build_constraints.iter().cloned());
+
     // TODO(charlie): These are all default values. We should consider whether we want to make them
     // optional on the downstream APIs.
-    let build_constraints = Constraints::default();
     let build_hasher = HashStrategy::default();
     let extras = ExtrasSpecification::default();
     let groups = DevGroupsSpecification::default();
@@ -551,7 +620,6 @@ async fn do_lock(
         build_options,
         &build_hasher,
         exclude_newer,
-        bounds,
         sources,
         concurrency,
         preview,
@@ -572,6 +640,7 @@ async fn do_lock(
             &overrides,
             &conflicts,
             environments,
+            required_environments,
             dependency_metadata,
             interpreter,
             &requires_python,
@@ -740,6 +809,12 @@ async fn do_lock(
                         .cloned()
                         .map(SupportedEnvironments::into_markers)
                         .unwrap_or_default(),
+                )
+                .with_required_environments(
+                    required_environments
+                        .cloned()
+                        .map(SupportedEnvironments::into_markers)
+                        .unwrap_or_default(),
                 );
 
             Ok(LockResult::Changed(previous, lock))
@@ -774,6 +849,7 @@ impl ValidatedLock {
         overrides: &[Requirement],
         conflicts: &Conflicts,
         environments: Option<&SupportedEnvironments>,
+        required_environments: Option<&SupportedEnvironments>,
         dependency_metadata: &DependencyMetadata,
         interpreter: &Interpreter,
         requires_python: &RequiresPython,
@@ -876,6 +952,23 @@ impl ValidatedLock {
         // If the set of supported environments has changed, we have to perform a clean resolution.
         let expected = lock.simplified_supported_environments();
         let actual = environments
+            .map(SupportedEnvironments::as_markers)
+            .unwrap_or_default()
+            .iter()
+            .copied()
+            .map(|marker| lock.simplify_environment(marker))
+            .collect::<Vec<_>>();
+        if expected != actual {
+            debug!(
+                "Ignoring existing lockfile due to change in supported environments: `{:?}` vs. `{:?}`",
+                expected, actual
+            );
+            return Ok(Self::Versions(lock));
+        }
+
+        // If the set of required platforms has changed, we have to perform a clean resolution.
+        let expected = lock.simplified_required_environments();
+        let actual = required_environments
             .map(SupportedEnvironments::as_markers)
             .unwrap_or_default()
             .iter()
@@ -1058,6 +1151,20 @@ impl ValidatedLock {
                 }
                 Ok(Self::Preferable(lock))
             }
+            SatisfiesResult::MismatchedPackageProvidesExtra(name, version, expected, actual) => {
+                if let Some(version) = version {
+                    debug!(
+                        "Ignoring existing lockfile due to mismatched extras for: `{name}=={version}`\n  Requested: {:?}\n  Existing: {:?}",
+                        expected, actual
+                    );
+                } else {
+                    debug!(
+                        "Ignoring existing lockfile due to mismatched extras for: `{name}`\n  Requested: {:?}\n  Existing: {:?}",
+                        expected, actual
+                    );
+                }
+                Ok(Self::Preferable(lock))
+            }
             SatisfiesResult::MissingVersion(name) => {
                 debug!("Ignoring existing lockfile due to missing version: `{name}`");
                 Ok(Self::Preferable(lock))
@@ -1077,47 +1184,86 @@ impl ValidatedLock {
     }
 }
 
-/// Reports on the versions that were upgraded in the new lockfile.
-///
-/// Returns `true` if any upgrades were reported.
-fn report_upgrades(
-    existing_lock: Option<&Lock>,
-    new_lock: &Lock,
-    printer: Printer,
-    dry_run: bool,
-) -> anyhow::Result<bool> {
-    let existing_packages: FxHashMap<&PackageName, BTreeSet<Option<&Version>>> =
-        if let Some(existing_lock) = existing_lock {
-            existing_lock.packages().iter().fold(
-                FxHashMap::with_capacity_and_hasher(existing_lock.packages().len(), FxBuildHasher),
+/// A modification to a lockfile.
+#[derive(Debug, Clone)]
+pub(crate) enum LockEvent<'lock> {
+    Update(
+        DryRun,
+        PackageName,
+        BTreeSet<Option<&'lock Version>>,
+        BTreeSet<Option<&'lock Version>>,
+    ),
+    Add(DryRun, PackageName, BTreeSet<Option<&'lock Version>>),
+    Remove(DryRun, PackageName, BTreeSet<Option<&'lock Version>>),
+}
+
+impl<'lock> LockEvent<'lock> {
+    /// Detect the change events between an (optional) existing and updated lockfile.
+    pub(crate) fn detect_changes(
+        existing_lock: Option<&'lock Lock>,
+        new_lock: &'lock Lock,
+        dry_run: DryRun,
+    ) -> impl Iterator<Item = Self> {
+        // Identify the package-versions in the existing lockfile.
+        let mut existing_packages: FxHashMap<&PackageName, BTreeSet<Option<&Version>>> =
+            if let Some(existing_lock) = existing_lock {
+                existing_lock.packages().iter().fold(
+                    FxHashMap::with_capacity_and_hasher(
+                        existing_lock.packages().len(),
+                        FxBuildHasher,
+                    ),
+                    |mut acc, package| {
+                        acc.entry(package.name())
+                            .or_default()
+                            .insert(package.version());
+                        acc
+                    },
+                )
+            } else {
+                FxHashMap::default()
+            };
+
+        // Identify the package-versions in the updated lockfile.
+        let mut new_packages: FxHashMap<&PackageName, BTreeSet<Option<&Version>>> =
+            new_lock.packages().iter().fold(
+                FxHashMap::with_capacity_and_hasher(new_lock.packages().len(), FxBuildHasher),
                 |mut acc, package| {
                     acc.entry(package.name())
                         .or_default()
                         .insert(package.version());
                     acc
                 },
-            )
-        } else {
-            FxHashMap::default()
-        };
+            );
 
-    let new_distributions: FxHashMap<&PackageName, BTreeSet<Option<&Version>>> =
-        new_lock.packages().iter().fold(
-            FxHashMap::with_capacity_and_hasher(new_lock.packages().len(), FxBuildHasher),
-            |mut acc, package| {
-                acc.entry(package.name())
-                    .or_default()
-                    .insert(package.version());
-                acc
-            },
-        );
+        let names = existing_packages
+            .keys()
+            .chain(new_packages.keys())
+            .map(|name| (*name).clone())
+            .collect::<BTreeSet<_>>();
 
-    let mut updated = false;
-    for name in existing_packages
-        .keys()
-        .chain(new_distributions.keys())
-        .collect::<BTreeSet<_>>()
-    {
+        names.into_iter().filter_map(move |name| {
+            match (existing_packages.remove(&name), new_packages.remove(&name)) {
+                (Some(existing_versions), Some(new_versions)) => {
+                    if existing_versions != new_versions {
+                        Some(Self::Update(dry_run, name, existing_versions, new_versions))
+                    } else {
+                        None
+                    }
+                }
+                (Some(existing_versions), None) => {
+                    Some(Self::Remove(dry_run, name, existing_versions))
+                }
+                (None, Some(new_versions)) => Some(Self::Add(dry_run, name, new_versions)),
+                (None, None) => {
+                    unreachable!("The key `{name}` should exist in at least one of the maps");
+                }
+            }
+        })
+    }
+}
+
+impl std::fmt::Display for LockEvent<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         /// Format a version for inclusion in the upgrade report.
         fn format_version(version: Option<&Version>) -> String {
             version
@@ -1125,56 +1271,65 @@ fn report_upgrades(
                 .unwrap_or_else(|| "(dynamic)".to_string())
         }
 
-        updated = true;
-        match (existing_packages.get(name), new_distributions.get(name)) {
-            (Some(existing_versions), Some(new_versions)) => {
-                if existing_versions != new_versions {
-                    let existing_versions = existing_versions
-                        .iter()
-                        .map(|version| format_version(*version))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    let new_versions = new_versions
-                        .iter()
-                        .map(|version| format_version(*version))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    writeln!(
-                        printer.stderr(),
-                        "{} {name} {existing_versions} -> {new_versions}",
-                        if dry_run { "Update" } else { "Updated" }.green().bold()
-                    )?;
-                }
-            }
-            (Some(existing_versions), None) => {
+        match self {
+            Self::Update(dry_run, name, existing_versions, new_versions) => {
                 let existing_versions = existing_versions
                     .iter()
                     .map(|version| format_version(*version))
                     .collect::<Vec<_>>()
                     .join(", ");
-                writeln!(
-                    printer.stderr(),
-                    "{} {name} {existing_versions}",
-                    if dry_run { "Remove" } else { "Removed" }.red().bold()
-                )?;
-            }
-            (None, Some(new_versions)) => {
                 let new_versions = new_versions
                     .iter()
                     .map(|version| format_version(*version))
                     .collect::<Vec<_>>()
                     .join(", ");
-                writeln!(
-                    printer.stderr(),
-                    "{} {name} {new_versions}",
-                    if dry_run { "Add" } else { "Added" }.green().bold()
-                )?;
+
+                write!(
+                    f,
+                    "{} {name} {existing_versions} -> {new_versions}",
+                    if dry_run.enabled() {
+                        "Update"
+                    } else {
+                        "Updated"
+                    }
+                    .green()
+                    .bold()
+                )
             }
-            (None, None) => {
-                unreachable!("The key `{name}` should exist in at least one of the maps");
+            Self::Add(dry_run, name, new_versions) => {
+                let new_versions = new_versions
+                    .iter()
+                    .map(|version| format_version(*version))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                write!(
+                    f,
+                    "{} {name} {new_versions}",
+                    if dry_run.enabled() { "Add" } else { "Added" }
+                        .green()
+                        .bold()
+                )
+            }
+            Self::Remove(dry_run, name, existing_versions) => {
+                let existing_versions = existing_versions
+                    .iter()
+                    .map(|version| format_version(*version))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                write!(
+                    f,
+                    "{} {name} {existing_versions}",
+                    if dry_run.enabled() {
+                        "Remove"
+                    } else {
+                        "Removed"
+                    }
+                    .red()
+                    .bold()
+                )
             }
         }
     }
-
-    Ok(updated)
 }

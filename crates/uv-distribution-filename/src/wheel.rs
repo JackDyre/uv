@@ -138,6 +138,13 @@ impl WheelFilename {
 
     /// Parse a wheel filename from the stem (e.g., `foo-1.2.3-py3-none-any`).
     pub fn from_stem(stem: &str) -> Result<Self, WheelFilenameError> {
+        // The wheel stem should not contain the `.whl` extension.
+        if std::path::Path::new(stem)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("whl"))
+        {
+            return Err(WheelFilenameError::UnexpectedExtension(stem.to_string()));
+        }
         Self::parse(stem, stem)
     }
 
@@ -292,8 +299,21 @@ impl<'de> Deserialize<'de> for WheelFilename {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(de::Error::custom)
+        struct Visitor;
+
+        impl de::Visitor<'_> for Visitor {
+            type Value = WheelFilename;
+
+            fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+                f.write_str("a string")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+                WheelFilename::from_str(v).map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_str(Visitor)
     }
 }
 
@@ -328,6 +348,8 @@ pub enum WheelFilenameError {
     MissingAbiTag(String),
     #[error("The wheel filename \"{0}\" is missing a platform tag")]
     MissingPlatformTag(String),
+    #[error("The wheel stem \"{0}\" has an unexpected extension")]
+    UnexpectedExtension(String),
 }
 
 #[cfg(test)]

@@ -2,7 +2,6 @@ use std::future::Future;
 use std::io;
 use std::path::Path;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
@@ -27,11 +26,10 @@ use uv_distribution_types::{
 use uv_extract::hash::Hasher;
 use uv_fs::write_atomic;
 use uv_platform_tags::Tags;
-use uv_pypi_types::HashDigest;
+use uv_pypi_types::{HashDigest, HashDigests};
 use uv_types::{BuildContext, BuildStack};
 
 use crate::archive::Archive;
-use crate::locks::Locks;
 use crate::metadata::{ArchiveMetadata, Metadata};
 use crate::source::SourceDistributionBuilder;
 use crate::{Error, LocalWheel, Reporter, RequiresDist};
@@ -51,7 +49,6 @@ use crate::{Error, LocalWheel, Reporter, RequiresDist};
 pub struct DistributionDatabase<'a, Context: BuildContext> {
     build_context: &'a Context,
     builder: SourceDistributionBuilder<'a, Context>,
-    locks: Rc<Locks>,
     client: ManagedClient<'a>,
     reporter: Option<Arc<dyn Reporter>>,
 }
@@ -65,7 +62,6 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
         Self {
             build_context,
             builder: SourceDistributionBuilder::new(build_context),
-            locks: Rc::new(Locks::default()),
             client: ManagedClient::new(client, concurrent_downloads),
             reporter: None,
         }
@@ -347,9 +343,6 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
         tags: &Tags,
         hashes: HashPolicy<'_>,
     ) -> Result<LocalWheel, Error> {
-        let lock = self.locks.acquire(dist).await;
-        let _guard = lock.lock().await;
-
         let built_wheel = self
             .builder
             .download_and_build(&BuildableSource::Dist(dist), tags, hashes, &self.client)
@@ -371,7 +364,7 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
 
         // If the wheel was unzipped previously, respect it. Source distributions are
         // cached under a unique revision ID, so unzipped directories are never stale.
-        match built_wheel.target.canonicalize() {
+        match self.build_context.cache().resolve_link(&built_wheel.target) {
             Ok(archive) => {
                 return Ok(LocalWheel {
                     dist: Dist::Source(dist.clone()),
@@ -495,9 +488,6 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
                 return Ok(ArchiveMetadata::from_metadata23(metadata.clone()));
             }
         }
-
-        let lock = self.locks.acquire(source).await;
-        let _guard = lock.lock().await;
 
         let metadata = self
             .builder
@@ -729,7 +719,7 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
                     })
                     .await??;
 
-                    vec![]
+                    HashDigests::empty()
                 } else {
                     // Create a hasher for each hash algorithm.
                     let algorithms = hashes.algorithms();
@@ -853,7 +843,10 @@ impl<'a, Context: BuildContext> DistributionDatabase<'a, Context> {
             })
         } else if hashes.is_none() {
             // Otherwise, unzip the wheel.
-            let archive = Archive::new(self.unzip_wheel(path, wheel_entry.path()).await?, vec![]);
+            let archive = Archive::new(
+                self.unzip_wheel(path, wheel_entry.path()).await?,
+                HashDigests::empty(),
+            );
 
             // Write the archive pointer to the cache.
             let pointer = LocalArchivePointer {
@@ -991,6 +984,20 @@ impl<'a> ManagedClient<'a> {
     {
         let _permit = self.control.acquire().await.unwrap();
         f(self.unmanaged).await
+    }
+
+    /// Perform a request using a client that internally manages the concurrency limit.
+    ///
+    /// The callback is passed the client and a semaphore. It must acquire the semaphore before
+    /// any request through the client and drop it after.
+    ///
+    /// This method serves as an escape hatch for functions that may want to send multiple requests
+    /// in parallel.
+    pub async fn manual<F, T>(&'a self, f: impl FnOnce(&'a RegistryClient, &'a Semaphore) -> F) -> T
+    where
+        F: Future<Output = T>,
+    {
+        f(self.unmanaged, &self.control).await
     }
 }
 
