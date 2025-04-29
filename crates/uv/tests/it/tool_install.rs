@@ -176,6 +176,111 @@ fn tool_install() {
 }
 
 #[test]
+fn tool_install_with_global_python() -> Result<()> {
+    let context = TestContext::new_with_versions(&["3.11", "3.12"])
+        .with_filtered_counts()
+        .with_filtered_exe_suffix();
+    let tool_dir = context.temp_dir.child("tools");
+    let bin_dir = context.temp_dir.child("bin");
+    let uv = context.user_config_dir.child("uv");
+    let versions = uv.child(".python-version");
+    versions.write_str("3.11")?;
+
+    // Install a tool
+    uv_snapshot!(context.filters(), context.tool_install()
+        .arg("flask")
+        .env(EnvVars::UV_TOOL_DIR, tool_dir.as_os_str())
+        .env(EnvVars::XDG_BIN_HOME, bin_dir.as_os_str())
+        .env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    Resolved [N] packages in [TIME]
+    Prepared [N] packages in [TIME]
+    Installed [N] packages in [TIME]
+     + blinker==1.7.0
+     + click==8.1.7
+     + flask==3.0.2
+     + itsdangerous==2.1.2
+     + jinja2==3.1.3
+     + markupsafe==2.1.5
+     + werkzeug==3.0.1
+    Installed 1 executable: flask
+    "###);
+
+    tool_dir.child("flask").assert(predicate::path::is_dir());
+    assert!(bin_dir
+        .child(format!("flask{}", std::env::consts::EXE_SUFFIX))
+        .exists());
+
+    uv_snapshot!(context.filters(), Command::new("flask").arg("--version").env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+    Python 3.11.[X]
+    Flask 3.0.2
+    Werkzeug 3.0.1
+
+    ----- stderr -----
+    "###);
+
+    // Change global version
+    uv_snapshot!(context.filters(), context.python_pin().arg("3.12").arg("--global"),
+        @r"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+    Updated `[UV_USER_CONFIG_DIR]/.python-version` from `3.11` -> `3.12`
+
+    ----- stderr -----
+    "
+    );
+
+    // Install flask again
+    uv_snapshot!(context.filters(), context.tool_install()
+        .arg("flask")
+        .arg("--reinstall")
+        .env(EnvVars::UV_TOOL_DIR, tool_dir.as_os_str())
+        .env(EnvVars::XDG_BIN_HOME, bin_dir.as_os_str())
+        .env(EnvVars::PATH, bin_dir.as_os_str()), @r"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    Resolved [N] packages in [TIME]
+    Prepared [N] packages in [TIME]
+    Uninstalled [N] packages in [TIME]
+    Installed [N] packages in [TIME]
+     ~ blinker==1.7.0
+     ~ click==8.1.7
+     ~ flask==3.0.2
+     ~ itsdangerous==2.1.2
+     ~ jinja2==3.1.3
+     ~ markupsafe==2.1.5
+     ~ werkzeug==3.0.1
+    Installed 1 executable: flask
+    ");
+
+    // Currently, when reinstalling a tool we use the original version the tool
+    // was installed with, not the most up-to-date global version
+    uv_snapshot!(context.filters(), Command::new("flask").arg("--version").env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+    Python 3.11.[X]
+    Flask 3.0.2
+    Werkzeug 3.0.1
+
+    ----- stderr -----
+    "###);
+
+    Ok(())
+}
+
+#[test]
 fn tool_install_with_editable() -> Result<()> {
     let context = TestContext::new("3.12")
         .with_exclude_newer("2025-01-18T00:00:00Z")
@@ -211,6 +316,117 @@ fn tool_install_with_editable() -> Result<()> {
      + iniconfig==2.0.0
     Installed 1 executable: app
     "###);
+
+    Ok(())
+}
+
+#[test]
+fn tool_install_with_compatible_build_constraints() -> Result<()> {
+    let context = TestContext::new("3.8")
+        .with_exclude_newer("2024-05-04T00:00:00Z")
+        .with_filtered_counts()
+        .with_filtered_exe_suffix();
+    let tool_dir = context.temp_dir.child("tools");
+    let bin_dir = context.temp_dir.child("bin");
+
+    let constraints_txt = context.temp_dir.child("build_constraints.txt");
+    constraints_txt.write_str("setuptools>=40")?;
+
+    uv_snapshot!(context.filters(), context.tool_install()
+        .arg("black")
+        .arg("--with")
+        .arg("requests==1.2")
+        .arg("--build-constraints")
+        .arg("build_constraints.txt")
+        .env(EnvVars::UV_TOOL_DIR, tool_dir.as_os_str())
+        .env(EnvVars::XDG_BIN_HOME, bin_dir.as_os_str())
+        .env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+    success: true
+    exit_code: 0
+    ----- stdout -----
+
+    ----- stderr -----
+    Resolved [N] packages in [TIME]
+    Prepared [N] packages in [TIME]
+    Installed [N] packages in [TIME]
+     + black==24.4.2
+     + click==8.1.7
+     + mypy-extensions==1.0.0
+     + packaging==24.0
+     + pathspec==0.12.1
+     + platformdirs==4.2.1
+     + requests==1.2.0
+     + tomli==2.0.1
+     + typing-extensions==4.11.0
+    Installed 2 executables: black, blackd
+    "###);
+
+    tool_dir
+        .child("black")
+        .child("uv-receipt.toml")
+        .assert(predicate::path::exists());
+
+    insta::with_settings!({
+        filters => context.filters(),
+    }, {
+        // We should have a tool receipt
+        assert_snapshot!(fs_err::read_to_string(tool_dir.join("black").join("uv-receipt.toml")).unwrap(), @r###"
+        [tool]
+        requirements = [
+            { name = "black" },
+            { name = "requests", specifier = "==1.2" },
+        ]
+        build-constraint-dependencies = [{ name = "setuptools", specifier = ">=40" }]
+        entrypoints = [
+            { name = "black", install-path = "[TEMP_DIR]/bin/black" },
+            { name = "blackd", install-path = "[TEMP_DIR]/bin/blackd" },
+        ]
+
+        [tool.options]
+        exclude-newer = "2024-05-04T00:00:00Z"
+        "###);
+    });
+
+    Ok(())
+}
+
+#[test]
+fn tool_install_with_incompatible_build_constraints() -> Result<()> {
+    let context = TestContext::new("3.8")
+        .with_exclude_newer("2024-05-04T00:00:00Z")
+        .with_filtered_counts()
+        .with_filtered_exe_suffix();
+    let tool_dir = context.temp_dir.child("tools");
+    let bin_dir = context.temp_dir.child("bin");
+
+    let constraints_txt = context.temp_dir.child("build_constraints.txt");
+    constraints_txt.write_str("setuptools==2")?;
+
+    uv_snapshot!(context.filters(), context.tool_install()
+        .arg("black")
+        .arg("--with")
+        .arg("requests==1.2")
+        .arg("--build-constraints")
+        .arg("build_constraints.txt")
+        .env(EnvVars::UV_TOOL_DIR, tool_dir.as_os_str())
+        .env(EnvVars::XDG_BIN_HOME, bin_dir.as_os_str())
+        .env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+    success: false
+    exit_code: 1
+    ----- stdout -----
+
+    ----- stderr -----
+    Resolved [N] packages in [TIME]
+      × Failed to download and build `requests==1.2.0`
+      ├─▶ Failed to resolve requirements from `setup.py` build
+      ├─▶ No solution found when resolving: `setuptools>=40.8.0`
+      ╰─▶ Because you require setuptools>=40.8.0 and setuptools==2, we can conclude that your requirements are unsatisfiable.
+    "###);
+
+    tool_dir
+        .child("black")
+        .child("uv-receipt.toml")
+        .assert(predicate::path::missing());
 
     Ok(())
 }
@@ -458,6 +674,8 @@ fn tool_install_editable() {
     ----- stdout -----
 
     ----- stderr -----
+    Resolved 1 package in [TIME]
+    Audited 1 package in [TIME]
     Installed 1 executable: black
     "###);
 
@@ -1471,7 +1689,7 @@ fn tool_install_uninstallable() {
         .arg("pyenv")
         .env(EnvVars::UV_TOOL_DIR, tool_dir.as_os_str())
         .env(EnvVars::XDG_BIN_HOME, bin_dir.as_os_str())
-        .env(EnvVars::PATH, bin_dir.as_os_str()), @r###"
+        .env(EnvVars::PATH, bin_dir.as_os_str()), @r"
     success: false
     exit_code: 1
     ----- stdout -----
@@ -1499,7 +1717,7 @@ fn tool_install_uninstallable() {
 
 
           hint: This usually indicates a problem with the package or the build environment.
-    "###);
+    ");
 
     // Ensure the tool environment is not created.
     tool_dir.child("pyenv").assert(predicate::path::missing());
@@ -2096,6 +2314,8 @@ fn tool_install_upgrade() {
     ----- stdout -----
 
     ----- stderr -----
+    Resolved [N] packages in [TIME]
+    Audited [N] packages in [TIME]
     Installed 2 executables: black, blackd
     "###);
 
@@ -3085,6 +3305,8 @@ fn tool_install_at_latest_upgrade() {
     ----- stdout -----
 
     ----- stderr -----
+    Resolved [N] packages in [TIME]
+    Audited [N] packages in [TIME]
     Installed 2 executables: black, blackd
     "###);
 

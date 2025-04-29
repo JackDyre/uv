@@ -10,17 +10,18 @@ use miette::{Diagnostic, IntoDiagnostic};
 use owo_colors::OwoColorize;
 use thiserror::Error;
 
+use uv_auth::UrlAuthPolicies;
 use uv_cache::Cache;
-use uv_client::{BaseClientBuilder, Connectivity, FlatIndexClient, RegistryClientBuilder};
+use uv_client::{BaseClientBuilder, FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
     BuildOptions, Concurrency, ConfigSettings, Constraints, IndexStrategy, KeyringProviderType,
-    NoBinary, NoBuild, PreviewMode, SourceStrategy, TrustedHost,
+    NoBinary, NoBuild, PreviewMode, SourceStrategy,
 };
 use uv_dispatch::{BuildDispatch, SharedState};
+use uv_distribution_types::Requirement;
 use uv_distribution_types::{DependencyMetadata, Index, IndexLocations};
 use uv_fs::Simplified;
 use uv_install_wheel::LinkMode;
-use uv_pypi_types::Requirement;
 use uv_python::{
     EnvironmentPreference, PythonDownloads, PythonInstallation, PythonPreference, PythonRequest,
 };
@@ -29,7 +30,7 @@ use uv_settings::PythonInstallMirrors;
 use uv_shell::{shlex_posix, shlex_windows, Shell};
 use uv_types::{AnyErrorBuild, BuildContext, BuildIsolation, BuildStack, HashStrategy};
 use uv_warnings::warn_user;
-use uv_workspace::{DiscoveryOptions, VirtualProject, WorkspaceError};
+use uv_workspace::{DiscoveryOptions, VirtualProject, WorkspaceCache, WorkspaceError};
 
 use crate::commands::pip::loggers::{DefaultInstallLogger, InstallLogger};
 use crate::commands::pip::operations::{report_interpreter, Changelog};
@@ -37,6 +38,7 @@ use crate::commands::project::{validate_project_requires_python, WorkspacePython
 use crate::commands::reporters::PythonDownloadReporter;
 use crate::commands::ExitStatus;
 use crate::printer::Printer;
+use crate::settings::NetworkSettings;
 
 /// Create a virtual environment.
 #[allow(clippy::unnecessary_wraps, clippy::fn_params_excessive_bools)]
@@ -52,15 +54,13 @@ pub(crate) async fn venv(
     index_strategy: IndexStrategy,
     dependency_metadata: DependencyMetadata,
     keyring_provider: KeyringProviderType,
-    allow_insecure_host: &[TrustedHost],
+    network_settings: &NetworkSettings,
     prompt: uv_virtualenv::Prompt,
     system_site_packages: bool,
-    connectivity: Connectivity,
     seed: bool,
     allow_existing: bool,
     exclude_newer: Option<ExcludeNewer>,
     concurrency: Concurrency,
-    native_tls: bool,
     no_config: bool,
     no_project: bool,
     cache: &Cache,
@@ -78,17 +78,15 @@ pub(crate) async fn venv(
         index_strategy,
         dependency_metadata,
         keyring_provider,
-        allow_insecure_host,
+        network_settings,
         prompt,
         system_site_packages,
-        connectivity,
         seed,
         python_preference,
         python_downloads,
         allow_existing,
         exclude_newer,
         concurrency,
-        native_tls,
         no_config,
         no_project,
         cache,
@@ -137,17 +135,15 @@ async fn venv_impl(
     index_strategy: IndexStrategy,
     dependency_metadata: DependencyMetadata,
     keyring_provider: KeyringProviderType,
-    allow_insecure_host: &[TrustedHost],
+    network_settings: &NetworkSettings,
     prompt: uv_virtualenv::Prompt,
     system_site_packages: bool,
-    connectivity: Connectivity,
     seed: bool,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     allow_existing: bool,
     exclude_newer: Option<ExcludeNewer>,
     concurrency: Concurrency,
-    native_tls: bool,
     no_config: bool,
     no_project: bool,
     cache: &Cache,
@@ -155,10 +151,13 @@ async fn venv_impl(
     relocatable: bool,
     preview: PreviewMode,
 ) -> miette::Result<ExitStatus> {
+    let workspace_cache = WorkspaceCache::default();
     let project = if no_project {
         None
     } else {
-        match VirtualProject::discover(project_dir, &DiscoveryOptions::default()).await {
+        match VirtualProject::discover(project_dir, &DiscoveryOptions::default(), &workspace_cache)
+            .await
+        {
             Ok(project) => Some(project),
             Err(WorkspaceError::MissingProject(_)) => None,
             Err(WorkspaceError::MissingPyprojectToml) => None,
@@ -193,9 +192,9 @@ async fn venv_impl(
     );
 
     let client_builder = BaseClientBuilder::default()
-        .connectivity(connectivity)
-        .native_tls(native_tls)
-        .allow_insecure_host(allow_insecure_host.to_vec());
+        .connectivity(network_settings.connectivity)
+        .native_tls(network_settings.native_tls)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
     let reporter = PythonDownloadReporter::single(printer);
 
@@ -255,7 +254,7 @@ async fn venv_impl(
                 warn_user!("{err}");
             }
         }
-    };
+    }
 
     writeln!(
         printer.stderr(),
@@ -299,8 +298,9 @@ async fn venv_impl(
             .cache(cache.clone())
             .index_urls(index_locations.index_urls())
             .index_strategy(index_strategy)
+            .url_auth_policies(UrlAuthPolicies::from(index_locations))
             .keyring(keyring_provider)
-            .allow_insecure_host(allow_insecure_host.to_vec())
+            .allow_insecure_host(network_settings.allow_insecure_host.clone())
             .markers(interpreter.markers())
             .platform(interpreter.platform())
             .build();
@@ -308,9 +308,9 @@ async fn venv_impl(
         // Resolve the flat indexes from `--find-links`.
         let flat_index = {
             let tags = interpreter.tags().map_err(VenvError::Tags)?;
-            let client = FlatIndexClient::new(&client, cache);
+            let client = FlatIndexClient::new(client.cached_client(), client.connectivity(), cache);
             let entries = client
-                .fetch(index_locations.flat_indexes().map(Index::url))
+                .fetch_all(index_locations.flat_indexes().map(Index::url))
                 .await
                 .map_err(VenvError::FlatIndex)?;
             FlatIndex::from_entries(
@@ -323,6 +323,7 @@ async fn venv_impl(
 
         // Initialize any shared state.
         let state = SharedState::default();
+        let workspace_cache = WorkspaceCache::default();
 
         // For seed packages, assume a bunch of default settings are sufficient.
         let build_constraints = Constraints::default();
@@ -351,6 +352,7 @@ async fn venv_impl(
             &build_hasher,
             exclude_newer,
             sources,
+            workspace_cache,
             concurrency,
             preview,
         );

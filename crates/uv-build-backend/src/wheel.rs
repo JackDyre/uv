@@ -1,11 +1,11 @@
-use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
-use std::{io, mem};
-
 use fs_err::File;
 use globset::{GlobSet, GlobSetBuilder};
 use itertools::Itertools;
 use sha2::{Digest, Sha256};
+use std::io::{BufReader, Read, Write};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::{io, mem};
 use tracing::{debug, trace};
 use walkdir::WalkDir;
 use zip::{CompressionMethod, ZipWriter};
@@ -14,10 +14,13 @@ use uv_distribution_filename::WheelFilename;
 use uv_fs::Simplified;
 use uv_globfilter::{parse_portable_glob, GlobDirFilter};
 use uv_platform_tags::{AbiTag, LanguageTag, PlatformTag};
+use uv_pypi_types::Identifier;
 use uv_warnings::warn_user_once;
 
-use crate::metadata::{BuildBackendSettings, DEFAULT_EXCLUDES};
-use crate::{DirectoryWriter, Error, FileList, ListWriter, PyProjectToml};
+use crate::metadata::DEFAULT_EXCLUDES;
+use crate::{
+    find_roots, BuildBackendSettings, DirectoryWriter, Error, FileList, ListWriter, PyProjectToml,
+};
 
 /// Build a wheel from the source tree and place it in the output directory.
 pub fn build_wheel(
@@ -114,24 +117,23 @@ fn write_wheel(
     }
     // The wheel must not include any files excluded by the source distribution (at least until we
     // have files generated in the source dist -> wheel build step).
-    for exclude in settings.source_exclude {
+    for exclude in &settings.source_exclude {
         // Avoid duplicate entries.
-        if !excludes.contains(&exclude) {
-            excludes.push(exclude);
+        if !excludes.contains(exclude) {
+            excludes.push(exclude.clone());
         }
     }
     debug!("Wheel excludes: {:?}", excludes);
     let exclude_matcher = build_exclude_matcher(excludes)?;
 
     debug!("Adding content files to wheel");
-    if settings.module_root.is_absolute() {
-        return Err(Error::AbsoluteModuleRoot(settings.module_root.clone()));
-    }
-    let strip_root = source_tree.join(settings.module_root);
-    let module_root = strip_root.join(pyproject_toml.name().as_dist_info_name().as_ref());
-    if !module_root.join("__init__.py").is_file() {
-        return Err(Error::MissingModule(module_root));
-    }
+    let (src_root, module_root) = find_roots(
+        source_tree,
+        pyproject_toml,
+        &settings.module_root,
+        settings.module_name.as_ref(),
+    )?;
+
     let mut files_visited = 0;
     for entry in WalkDir::new(module_root)
         .into_iter()
@@ -158,7 +160,7 @@ fn write_wheel(
             .expect("walkdir starts with root");
         let wheel_path = entry
             .path()
-            .strip_prefix(&strip_root)
+            .strip_prefix(&src_root)
             .expect("walkdir starts with root");
         if exclude_matcher.is_match(match_path) {
             trace!("Excluding from module: `{}`", match_path.user_display());
@@ -271,10 +273,19 @@ pub fn build_editable(
         return Err(Error::AbsoluteModuleRoot(settings.module_root.clone()));
     }
     let src_root = source_tree.join(settings.module_root);
-    let module_root = src_root.join(pyproject_toml.name().as_dist_info_name().as_ref());
-    if !module_root.join("__init__.py").is_file() {
-        return Err(Error::MissingModule(module_root));
-    }
+
+    let module_name = if let Some(module_name) = settings.module_name {
+        module_name
+    } else {
+        // Should never error, the rules for package names (in dist-info formatting) are stricter
+        // than those for identifiers
+        Identifier::from_str(pyproject_toml.name().as_dist_info_name().as_ref())?
+    };
+    debug!("Module name: `{:?}`", module_name);
+
+    // Check that a module root exists in the directory we're linking from the `.pth` file
+    crate::find_module_root(&src_root, module_name)?;
+
     wheel_writer.write_bytes(
         &format!("{}.pth", pyproject_toml.name().as_dist_info_name()),
         src_root.as_os_str().as_encoded_bytes(),
@@ -485,6 +496,14 @@ fn wheel_subdir_from_globs(
             root: src.to_path_buf(),
             err,
         })?;
+
+        // Skip the root path, which is already included as `target` prior to the loop.
+        // (If `entry.path() == src`, then `relative` is empty, and `relative_licenses` is
+        // `target`.)
+        if entry.path() == src {
+            continue;
+        }
+
         // TODO(konsti): This should be prettier.
         let relative = entry
             .path()
@@ -494,7 +513,7 @@ fn wheel_subdir_from_globs(
         if !matcher.match_path(relative) {
             trace!("Excluding {}: `{}`", globs_field, relative.user_display());
             continue;
-        };
+        }
 
         let relative_licenses = Path::new(target)
             .join(relative)
@@ -615,7 +634,7 @@ impl ZipDirectoryWriter {
     ) -> Result<Box<dyn Write + 'slf>, Error> {
         // 644 is the default of the zip crate.
         let permissions = if executable_bit { 775 } else { 664 };
-        let options = zip::write::FileOptions::default()
+        let options = zip::write::SimpleFileOptions::default()
             .unix_permissions(permissions)
             .compression_method(self.compression);
         self.writer.start_file(path, options)?;
@@ -626,7 +645,7 @@ impl ZipDirectoryWriter {
 impl DirectoryWriter for ZipDirectoryWriter {
     fn write_bytes(&mut self, path: &str, bytes: &[u8]) -> Result<(), Error> {
         trace!("Adding {}", path);
-        let options = zip::write::FileOptions::default().compression_method(self.compression);
+        let options = zip::write::SimpleFileOptions::default().compression_method(self.compression);
         self.writer.start_file(path, options)?;
         self.writer.write_all(bytes)?;
 
@@ -661,7 +680,7 @@ impl DirectoryWriter for ZipDirectoryWriter {
 
     fn write_directory(&mut self, directory: &str) -> Result<(), Error> {
         trace!("Adding directory {}", directory);
-        let options = zip::write::FileOptions::default().compression_method(self.compression);
+        let options = zip::write::SimpleFileOptions::default().compression_method(self.compression);
         Ok(self.writer.add_directory(directory, options)?)
     }
 

@@ -44,8 +44,11 @@ pub enum Error {
     MalformedWorkspace,
     #[error("Expected a dependency at index {0}")]
     MissingDependency(usize),
-    #[error("Cannot perform ambiguous update; found multiple entries with matching package names")]
-    Ambiguous,
+    #[error("Cannot perform ambiguous update; found multiple entries for `{}`:\n{}", package_name, requirements.iter().map(|requirement| format!("- `{requirement}`")).join("\n"))]
+    Ambiguous {
+        package_name: PackageName,
+        requirements: Vec<Requirement>,
+    },
 }
 
 /// The result of editing an array in a TOML document.
@@ -121,6 +124,8 @@ impl PyProjectTomlMut {
 
         // Add the path to the workspace.
         members.push(PortablePath::from(path.as_ref()).to_string());
+
+        reformat_array_multiline(members);
 
         Ok(())
     }
@@ -403,11 +408,24 @@ impl PyProjectTomlMut {
             .as_table_like_mut()
             .ok_or(Error::MalformedDependencies)?;
 
-        let group = optional_dependencies
-            .entry(group.as_ref())
-            .or_insert(Item::Value(Value::Array(Array::new())))
-            .as_array_mut()
-            .ok_or(Error::MalformedDependencies)?;
+        // Try to find the existing group.
+        let existing_group = optional_dependencies.iter_mut().find_map(|(key, value)| {
+            if ExtraName::from_str(key.get()).is_ok_and(|g| g == *group) {
+                Some(value)
+            } else {
+                None
+            }
+        });
+
+        // If the group doesn't exist, create it.
+        let group = match existing_group {
+            Some(value) => value,
+            None => optional_dependencies
+                .entry(group.as_ref())
+                .or_insert(Item::Value(Value::Array(Array::new()))),
+        }
+        .as_array_mut()
+        .ok_or(Error::MalformedDependencies)?;
 
         let added = add_dependency(req, group, source.is_some())?;
 
@@ -454,11 +472,24 @@ impl PyProjectTomlMut {
             .map(|k| k.get())
             .is_sorted();
 
-        let group = dependency_groups
-            .entry(group.as_ref())
-            .or_insert(Item::Value(Value::Array(Array::new())))
-            .as_array_mut()
-            .ok_or(Error::MalformedDependencies)?;
+        // Try to find the existing group.
+        let existing_group = dependency_groups.iter_mut().find_map(|(key, value)| {
+            if GroupName::from_str(key.get()).is_ok_and(|g| g == *group) {
+                Some(value)
+            } else {
+                None
+            }
+        });
+
+        // If the group doesn't exist, create it.
+        let group = match existing_group {
+            Some(value) => value,
+            None => dependency_groups
+                .entry(group.as_ref())
+                .or_insert(Item::Value(Value::Array(Array::new()))),
+        }
+        .as_array_mut()
+        .ok_or(Error::MalformedDependencies)?;
 
         let added = add_dependency(req, group, source.is_some())?;
 
@@ -487,21 +518,25 @@ impl PyProjectTomlMut {
         Ok(added)
     }
 
-    /// Set the minimum version for an existing dependency in `project.dependencies`.
+    /// Set the minimum version for an existing dependency.
     pub fn set_dependency_minimum_version(
         &mut self,
+        dependency_type: &DependencyType,
         index: usize,
         version: Version,
     ) -> Result<(), Error> {
-        // Get or create `project.dependencies`.
-        let dependencies = self
-            .project()?
-            .entry("dependencies")
-            .or_insert(Item::Value(Value::Array(Array::new())))
-            .as_array_mut()
-            .ok_or(Error::MalformedDependencies)?;
+        let group = match dependency_type {
+            DependencyType::Production => self.set_project_dependency_minimum_version()?,
+            DependencyType::Dev => self.set_dev_dependency_minimum_version()?,
+            DependencyType::Optional(ref extra) => {
+                self.set_optional_dependency_minimum_version(extra)?
+            }
+            DependencyType::Group(ref group) => {
+                self.set_dependency_group_requirement_minimum_version(group)?
+            }
+        };
 
-        let Some(req) = dependencies.get(index) else {
+        let Some(req) = group.get(index) else {
             return Err(Error::MissingDependency(index));
         };
 
@@ -512,17 +547,26 @@ impl PyProjectTomlMut {
         req.version_or_url = Some(VersionOrUrl::VersionSpecifier(VersionSpecifiers::from(
             VersionSpecifier::greater_than_equal_version(version),
         )));
-        dependencies.replace(index, req.to_string());
+        group.replace(index, req.to_string());
 
         Ok(())
     }
 
+    /// Set the minimum version for an existing dependency in `project.dependencies`.
+    fn set_project_dependency_minimum_version(&mut self) -> Result<&mut Array, Error> {
+        // Get or create `project.dependencies`.
+        let dependencies = self
+            .project()?
+            .entry("dependencies")
+            .or_insert(Item::Value(Value::Array(Array::new())))
+            .as_array_mut()
+            .ok_or(Error::MalformedDependencies)?;
+
+        Ok(dependencies)
+    }
+
     /// Set the minimum version for an existing dependency in `tool.uv.dev-dependencies`.
-    pub fn set_dev_dependency_minimum_version(
-        &mut self,
-        index: usize,
-        version: Version,
-    ) -> Result<(), Error> {
+    fn set_dev_dependency_minimum_version(&mut self) -> Result<&mut Array, Error> {
         // Get or create `tool.uv.dev-dependencies`.
         let dev_dependencies = self
             .doc
@@ -539,29 +583,14 @@ impl PyProjectTomlMut {
             .as_array_mut()
             .ok_or(Error::MalformedDependencies)?;
 
-        let Some(req) = dev_dependencies.get(index) else {
-            return Err(Error::MissingDependency(index));
-        };
-
-        let mut req = req
-            .as_str()
-            .and_then(try_parse_requirement)
-            .ok_or(Error::MalformedDependencies)?;
-        req.version_or_url = Some(VersionOrUrl::VersionSpecifier(VersionSpecifiers::from(
-            VersionSpecifier::greater_than_equal_version(version),
-        )));
-        dev_dependencies.replace(index, req.to_string());
-
-        Ok(())
+        Ok(dev_dependencies)
     }
 
     /// Set the minimum version for an existing dependency in `project.optional-dependencies`.
-    pub fn set_optional_dependency_minimum_version(
+    fn set_optional_dependency_minimum_version(
         &mut self,
         group: &ExtraName,
-        index: usize,
-        version: Version,
-    ) -> Result<(), Error> {
+    ) -> Result<&mut Array, Error> {
         // Get or create `project.optional-dependencies`.
         let optional_dependencies = self
             .project()?
@@ -570,35 +599,30 @@ impl PyProjectTomlMut {
             .as_table_like_mut()
             .ok_or(Error::MalformedDependencies)?;
 
+        // Try to find the existing extra.
+        let existing_key = optional_dependencies.iter().find_map(|(key, _value)| {
+            if ExtraName::from_str(key).is_ok_and(|g| g == *group) {
+                Some(key.to_string())
+            } else {
+                None
+            }
+        });
+
+        // If the group doesn't exist, create it.
         let group = optional_dependencies
-            .entry(group.as_ref())
+            .entry(existing_key.as_deref().unwrap_or(group.as_ref()))
             .or_insert(Item::Value(Value::Array(Array::new())))
             .as_array_mut()
             .ok_or(Error::MalformedDependencies)?;
 
-        let Some(req) = group.get(index) else {
-            return Err(Error::MissingDependency(index));
-        };
-
-        let mut req = req
-            .as_str()
-            .and_then(try_parse_requirement)
-            .ok_or(Error::MalformedDependencies)?;
-        req.version_or_url = Some(VersionOrUrl::VersionSpecifier(VersionSpecifiers::from(
-            VersionSpecifier::greater_than_equal_version(version),
-        )));
-        group.replace(index, req.to_string());
-
-        Ok(())
+        Ok(group)
     }
 
     /// Set the minimum version for an existing dependency in `dependency-groups`.
-    pub fn set_dependency_group_requirement_minimum_version(
+    fn set_dependency_group_requirement_minimum_version(
         &mut self,
         group: &GroupName,
-        index: usize,
-        version: Version,
-    ) -> Result<(), Error> {
+    ) -> Result<&mut Array, Error> {
         // Get or create `dependency-groups`.
         let dependency_groups = self
             .doc
@@ -607,26 +631,23 @@ impl PyProjectTomlMut {
             .as_table_like_mut()
             .ok_or(Error::MalformedDependencies)?;
 
+        // Try to find the existing group.
+        let existing_key = dependency_groups.iter().find_map(|(key, _value)| {
+            if GroupName::from_str(key).is_ok_and(|g| g == *group) {
+                Some(key.to_string())
+            } else {
+                None
+            }
+        });
+
+        // If the group doesn't exist, create it.
         let group = dependency_groups
-            .entry(group.as_ref())
+            .entry(existing_key.as_deref().unwrap_or(group.as_ref()))
             .or_insert(Item::Value(Value::Array(Array::new())))
             .as_array_mut()
             .ok_or(Error::MalformedDependencies)?;
 
-        let Some(req) = group.get(index) else {
-            return Err(Error::MissingDependency(index));
-        };
-
-        let mut req = req
-            .as_str()
-            .and_then(try_parse_requirement)
-            .ok_or(Error::MalformedDependencies)?;
-        req.version_or_url = Some(VersionOrUrl::VersionSpecifier(VersionSpecifiers::from(
-            VersionSpecifier::greater_than_equal_version(version),
-        )));
-        group.replace(index, req.to_string());
-
-        Ok(())
+        Ok(group)
     }
 
     /// Adds a source to `tool.uv.sources`.
@@ -721,7 +742,15 @@ impl PyProjectTomlMut {
                     .ok_or(Error::MalformedDependencies)
             })
             .transpose()?
-            .and_then(|extras| extras.get_mut(group.as_ref()))
+            .and_then(|extras| {
+                extras.iter_mut().find_map(|(key, value)| {
+                    if ExtraName::from_str(key.get()).is_ok_and(|g| g == *group) {
+                        Some(value)
+                    } else {
+                        None
+                    }
+                })
+            })
             .map(|dependencies| {
                 dependencies
                     .as_array_mut()
@@ -754,7 +783,15 @@ impl PyProjectTomlMut {
                     .ok_or(Error::MalformedDependencies)
             })
             .transpose()?
-            .and_then(|groups| groups.get_mut(group.as_ref()))
+            .and_then(|groups| {
+                groups.iter_mut().find_map(|(key, value)| {
+                    if GroupName::from_str(key.get()).is_ok_and(|g| g == *group) {
+                        Some(value)
+                    } else {
+                        None
+                    }
+                })
+            })
             .map(|dependencies| {
                 dependencies
                     .as_array_mut()
@@ -1001,26 +1038,55 @@ pub fn add_dependency(
 
             let decor = value.decor_mut();
 
-            // If we're adding to the end of the list, treat trailing comments as leading comments
-            // on the added dependency.
-            //
-            // For example, given:
-            // ```toml
-            // dependencies = [
-            //     "anyio", # trailing comment
-            // ]
-            // ```
-            //
-            // If we add `flask` to the end, we want to retain the comment on `anyio`:
-            // ```toml
-            // dependencies = [
-            //     "anyio", # trailing comment
-            //     "flask",
-            // ]
-            // ```
-            if index == deps.len() {
-                decor.set_prefix(deps.trailing().clone());
-                deps.set_trailing("");
+            // Ensure comments remain on the correct line, post-insertion
+            match index {
+                val if val == deps.len() => {
+                    // If we're adding to the end of the list, treat trailing comments as leading comments
+                    // on the added dependency.
+                    //
+                    // For example, given:
+                    // ```toml
+                    // dependencies = [
+                    //     "anyio", # trailing comment
+                    // ]
+                    // ```
+                    //
+                    // If we add `flask` to the end, we want to retain the comment on `anyio`:
+                    // ```toml
+                    // dependencies = [
+                    //     "anyio", # trailing comment
+                    //     "flask",
+                    // ]
+                    // ```
+                    decor.set_prefix(deps.trailing().clone());
+                    deps.set_trailing("");
+                }
+                0 => {
+                    // If the dependency is prepended to a non-empty list, do nothing
+                }
+                val => {
+                    // Retain position of end-of-line comments when a dependency is inserted right below it.
+                    //
+                    // For example, given:
+                    // ```toml
+                    // dependencies = [
+                    //     "anyio", # end-of-line comment
+                    //     "flask",
+                    // ]
+                    // ```
+                    //
+                    // If we add `pydantic` (between `anyio` and `flask`), we want to retain the comment on `anyio`:
+                    // ```toml
+                    // dependencies = [
+                    //     "anyio", # end-of-line comment
+                    //     "pydantic",
+                    //     "flask",
+                    // ]
+                    // ```
+                    let targeted_decor = deps.get_mut(val).unwrap().decor_mut();
+                    decor.set_prefix(targeted_decor.prefix().unwrap().clone());
+                    targeted_decor.set_prefix(""); // Re-formatted later by `reformat_array_multiline`
+                }
             }
 
             deps.insert_formatted(index, value);
@@ -1124,16 +1190,24 @@ pub fn add_dependency(
             Ok(ArrayEdit::Update(i))
         }
         // Cannot perform ambiguous updates.
-        _ => Err(Error::Ambiguous),
+        _ => Err(Error::Ambiguous {
+            package_name: req.name.clone(),
+            requirements: to_replace
+                .into_iter()
+                .map(|(_, requirement)| requirement)
+                .collect(),
+        }),
     }
 }
 
 /// Update an existing requirement.
 fn update_requirement(old: &mut Requirement, new: &Requirement, has_source: bool) {
     // Add any new extras.
-    old.extras.extend(new.extras.iter().cloned());
-    old.extras.sort_unstable();
-    old.extras.dedup();
+    let mut extras = old.extras.to_vec();
+    extras.extend(new.extras.iter().cloned());
+    extras.sort_unstable();
+    extras.dedup();
+    old.extras = extras.into_boxed_slice();
 
     // Clear the requirement source if we are going to add to `tool.uv.sources`.
     if has_source {

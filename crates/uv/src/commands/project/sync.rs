@@ -7,35 +7,37 @@ use anyhow::{Context, Result};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 
+use uv_auth::UrlAuthPolicies;
 use uv_cache::Cache;
-use uv_client::{Connectivity, FlatIndexClient, RegistryClientBuilder};
+use uv_client::{FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
-    Concurrency, Constraints, DevGroupsManifest, DevGroupsSpecification, DryRun, EditableMode,
-    ExtrasSpecification, HashCheckingMode, InstallOptions, PreviewMode, TrustedHost,
+    Concurrency, Constraints, DependencyGroups, DependencyGroupsWithDefaults, DryRun, EditableMode,
+    ExtrasSpecification, ExtrasSpecificationWithDefaults, HashCheckingMode, InstallOptions,
+    PreviewMode,
 };
 use uv_dispatch::BuildDispatch;
 use uv_distribution_types::{
-    DirectorySourceDist, Dist, Index, Resolution, ResolvedDist, SourceDist,
+    DirectorySourceDist, Dist, Index, Requirement, Resolution, ResolvedDist, SourceDist,
 };
 use uv_fs::Simplified;
 use uv_installer::SitePackages;
-use uv_normalize::PackageName;
+use uv_normalize::{DefaultExtras, DefaultGroups, PackageName};
 use uv_pep508::{MarkerTree, VersionOrUrl};
 use uv_pypi_types::{ParsedArchiveUrl, ParsedGitUrl, ParsedUrl};
 use uv_python::{PythonDownloads, PythonEnvironment, PythonPreference, PythonRequest};
-use uv_resolver::{FlatIndex, Installable};
+use uv_resolver::{FlatIndex, Installable, Lock};
 use uv_scripts::{Pep723ItemRef, Pep723Script};
 use uv_settings::PythonInstallMirrors;
 use uv_types::{BuildIsolation, HashStrategy};
 use uv_warnings::warn_user;
 use uv_workspace::pyproject::Source;
-use uv_workspace::{DiscoveryOptions, MemberDiscovery, VirtualProject, Workspace};
+use uv_workspace::{DiscoveryOptions, MemberDiscovery, VirtualProject, Workspace, WorkspaceCache};
 
 use crate::commands::pip::loggers::{DefaultInstallLogger, DefaultResolveLogger, InstallLogger};
 use crate::commands::pip::operations;
 use crate::commands::pip::operations::Modifications;
 use crate::commands::project::install_target::InstallTarget;
-use crate::commands::project::lock::{do_safe_lock, LockMode, LockResult};
+use crate::commands::project::lock::{LockMode, LockOperation, LockResult};
 use crate::commands::project::lock_target::LockTarget;
 use crate::commands::project::{
     default_dependency_groups, detect_conflicts, script_specification, update_environment,
@@ -43,7 +45,7 @@ use crate::commands::project::{
 };
 use crate::commands::{diagnostics, ExitStatus};
 use crate::printer::Printer;
-use crate::settings::{InstallerSettingsRef, ResolverInstallerSettings};
+use crate::settings::{InstallerSettingsRef, NetworkSettings, ResolverInstallerSettings};
 
 /// Sync the project environment.
 #[allow(clippy::fn_params_excessive_bools)]
@@ -56,7 +58,7 @@ pub(crate) async fn sync(
     all_packages: bool,
     package: Option<PackageName>,
     extras: ExtrasSpecification,
-    dev: DevGroupsSpecification,
+    dev: DependencyGroups,
     editable: EditableMode,
     install_options: InstallOptions,
     modifications: Modifications,
@@ -65,18 +67,17 @@ pub(crate) async fn sync(
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     settings: ResolverInstallerSettings,
+    network_settings: NetworkSettings,
     script: Option<Pep723Script>,
     installer_metadata: bool,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     no_config: bool,
     cache: &Cache,
     printer: Printer,
     preview: PreviewMode,
 ) -> Result<ExitStatus> {
     // Identify the target.
+    let workspace_cache = WorkspaceCache::default();
     let target = if let Some(script) = script {
         SyncTarget::Script(script)
     } else {
@@ -88,17 +89,19 @@ pub(crate) async fn sync(
                     members: MemberDiscovery::None,
                     ..DiscoveryOptions::default()
                 },
+                &workspace_cache,
             )
             .await?
         } else if let Some(package) = package.as_ref() {
             VirtualProject::Project(
-                Workspace::discover(project_dir, &DiscoveryOptions::default())
+                Workspace::discover(project_dir, &DiscoveryOptions::default(), &workspace_cache)
                     .await?
                     .with_current_project(package.clone())
                     .with_context(|| format!("Package `{package}` not found in workspace"))?,
             )
         } else {
-            VirtualProject::discover(project_dir, &DiscoveryOptions::default()).await?
+            VirtualProject::discover(project_dir, &DiscoveryOptions::default(), &workspace_cache)
+                .await?
         };
 
         // TODO(lucab): improve warning content
@@ -113,9 +116,15 @@ pub(crate) async fn sync(
     };
 
     // Determine the default groups to include.
-    let defaults = match &target {
+    let default_groups = match &target {
         SyncTarget::Project(project) => default_dependency_groups(project.pyproject_toml())?,
-        SyncTarget::Script(..) => Vec::new(),
+        SyncTarget::Script(..) => DefaultGroups::default(),
+    };
+
+    // Determine the default extras to include.
+    let default_extras = match &target {
+        SyncTarget::Project(_project) => DefaultExtras::default(),
+        SyncTarget::Script(..) => DefaultExtras::default(),
     };
 
     // Discover or create the virtual environment.
@@ -125,11 +134,9 @@ pub(crate) async fn sync(
                 project.workspace(),
                 python.as_deref().map(PythonRequest::parse),
                 &install_mirrors,
+                &network_settings,
                 python_preference,
                 python_downloads,
-                connectivity,
-                native_tls,
-                allow_insecure_host,
                 no_config,
                 active,
                 cache,
@@ -142,11 +149,9 @@ pub(crate) async fn sync(
             ScriptEnvironment::get_or_init(
                 Pep723ItemRef::Script(script),
                 python.as_deref().map(PythonRequest::parse),
+                &network_settings,
                 python_preference,
                 python_downloads,
-                connectivity,
-                native_tls,
-                allow_insecure_host,
                 &install_mirrors,
                 no_config,
                 active,
@@ -276,23 +281,42 @@ pub(crate) async fn sync(
                 ));
             }
 
-            let spec =
-                script_specification(Pep723ItemRef::Script(script), settings.as_ref().into())?
-                    .unwrap_or_default();
+            // Parse the requirements from the script.
+            let spec = script_specification(Pep723ItemRef::Script(script), &settings.resolver)?
+                .unwrap_or_default();
+
+            // Parse the build constraints from the script.
+            let build_constraints = script
+                .metadata
+                .tool
+                .as_ref()
+                .and_then(|tool| {
+                    tool.uv
+                        .as_ref()
+                        .and_then(|uv| uv.build_constraint_dependencies.as_ref())
+                })
+                .map(|constraints| {
+                    Constraints::from_requirements(
+                        constraints
+                            .iter()
+                            .map(|constraint| Requirement::from(constraint.clone())),
+                    )
+                });
+
             match update_environment(
                 Deref::deref(&environment).clone(),
                 spec,
                 modifications,
+                build_constraints.unwrap_or_default(),
                 &settings,
+                &network_settings,
                 &PlatformState::default(),
                 Box::new(DefaultResolveLogger),
                 Box::new(DefaultInstallLogger),
                 installer_metadata,
-                connectivity,
                 concurrency,
-                native_tls,
-                allow_insecure_host,
                 cache,
+                workspace_cache,
                 dry_run,
                 printer,
                 preview,
@@ -301,9 +325,11 @@ pub(crate) async fn sync(
             {
                 Ok(..) => return Ok(ExitStatus::Success),
                 Err(ProjectError::Operation(err)) => {
-                    return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                        .report(err)
-                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                    return diagnostics::OperationDiagnostic::native_tls(
+                        network_settings.native_tls,
+                    )
+                    .report(err)
+                    .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                 }
                 Err(err) => return Err(err.into()),
             }
@@ -329,20 +355,18 @@ pub(crate) async fn sync(
         SyncTarget::Script(script) => LockTarget::from(script),
     };
 
-    let lock = match do_safe_lock(
+    let outcome = match LockOperation::new(
         mode,
-        lock_target,
-        settings.as_ref().into(),
+        &settings.resolver,
+        &network_settings,
         &state,
         Box::new(DefaultResolveLogger),
-        connectivity,
         concurrency,
-        native_tls,
-        allow_insecure_host,
         cache,
         printer,
         preview,
     )
+    .execute(lock_target)
     .await
     {
         Ok(result) => {
@@ -383,68 +407,24 @@ pub(crate) async fn sync(
                     }
                 }
             }
-            result.into_lock()
+            Outcome::Success(result.into_lock())
         }
         Err(ProjectError::Operation(err)) => {
-            return diagnostics::OperationDiagnostic::native_tls(native_tls)
+            return diagnostics::OperationDiagnostic::native_tls(network_settings.native_tls)
                 .report(err)
                 .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+        }
+        Err(ProjectError::LockMismatch(lock)) if dry_run.enabled() => {
+            // The lockfile is mismatched, but we're in dry-run mode. We should proceed with the
+            // sync operation, but exit with a non-zero status.
+            Outcome::LockMismatch(lock)
         }
         Err(err) => return Err(err.into()),
     };
 
     // Identify the installation target.
-    let sync_target = match &target {
-        SyncTarget::Project(project) => {
-            match &project {
-                VirtualProject::Project(project) => {
-                    if all_packages {
-                        InstallTarget::Workspace {
-                            workspace: project.workspace(),
-                            lock: &lock,
-                        }
-                    } else if let Some(package) = package.as_ref() {
-                        InstallTarget::Project {
-                            workspace: project.workspace(),
-                            name: package,
-                            lock: &lock,
-                        }
-                    } else {
-                        // By default, install the root package.
-                        InstallTarget::Project {
-                            workspace: project.workspace(),
-                            name: project.project_name(),
-                            lock: &lock,
-                        }
-                    }
-                }
-                VirtualProject::NonProject(workspace) => {
-                    if all_packages {
-                        InstallTarget::NonProjectWorkspace {
-                            workspace,
-                            lock: &lock,
-                        }
-                    } else if let Some(package) = package.as_ref() {
-                        InstallTarget::Project {
-                            workspace,
-                            name: package,
-                            lock: &lock,
-                        }
-                    } else {
-                        // By default, install the entire workspace.
-                        InstallTarget::NonProjectWorkspace {
-                            workspace,
-                            lock: &lock,
-                        }
-                    }
-                }
-            }
-        }
-        SyncTarget::Script(script) => InstallTarget::Script {
-            script,
-            lock: &lock,
-        },
-    };
+    let sync_target =
+        identify_installation_target(&target, outcome.lock(), all_packages, package.as_ref());
 
     let state = state.fork();
 
@@ -452,19 +432,17 @@ pub(crate) async fn sync(
     match do_sync(
         sync_target,
         &environment,
-        &extras,
-        &dev.with_defaults(defaults),
+        &extras.with_defaults(default_extras),
+        &dev.with_defaults(default_groups),
         editable,
         install_options,
         modifications,
-        settings.as_ref().into(),
+        (&settings).into(),
+        &network_settings,
         &state,
         Box::new(DefaultInstallLogger),
         installer_metadata,
-        connectivity,
         concurrency,
-        native_tls,
-        allow_insecure_host,
         cache,
         dry_run,
         printer,
@@ -474,14 +452,86 @@ pub(crate) async fn sync(
     {
         Ok(()) => {}
         Err(ProjectError::Operation(err)) => {
-            return diagnostics::OperationDiagnostic::native_tls(native_tls)
+            return diagnostics::OperationDiagnostic::native_tls(network_settings.native_tls)
                 .report(err)
                 .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
         }
         Err(err) => return Err(err.into()),
     }
 
-    Ok(ExitStatus::Success)
+    match outcome {
+        Outcome::Success(..) => Ok(ExitStatus::Success),
+        Outcome::LockMismatch(lock) => Err(ProjectError::LockMismatch(lock).into()),
+    }
+}
+
+/// The outcome of a `lock` operation within a `sync` operation.
+#[derive(Debug)]
+enum Outcome {
+    /// The `lock` operation was successful.
+    Success(Lock),
+    /// The `lock` operation successfully resolved, but failed due to a mismatch (e.g., with `--locked`).
+    LockMismatch(Box<Lock>),
+}
+
+impl Outcome {
+    /// Return the [`Lock`] associated with this outcome.
+    fn lock(&self) -> &Lock {
+        match self {
+            Self::Success(lock) => lock,
+            Self::LockMismatch(lock) => lock,
+        }
+    }
+}
+
+fn identify_installation_target<'a>(
+    target: &'a SyncTarget,
+    lock: &'a Lock,
+    all_packages: bool,
+    package: Option<&'a PackageName>,
+) -> InstallTarget<'a> {
+    match &target {
+        SyncTarget::Project(project) => {
+            match &project {
+                VirtualProject::Project(project) => {
+                    if all_packages {
+                        InstallTarget::Workspace {
+                            workspace: project.workspace(),
+                            lock,
+                        }
+                    } else if let Some(package) = package {
+                        InstallTarget::Project {
+                            workspace: project.workspace(),
+                            name: package,
+                            lock,
+                        }
+                    } else {
+                        // By default, install the root package.
+                        InstallTarget::Project {
+                            workspace: project.workspace(),
+                            name: project.project_name(),
+                            lock,
+                        }
+                    }
+                }
+                VirtualProject::NonProject(workspace) => {
+                    if all_packages {
+                        InstallTarget::NonProjectWorkspace { workspace, lock }
+                    } else if let Some(package) = package {
+                        InstallTarget::Project {
+                            workspace,
+                            name: package,
+                            lock,
+                        }
+                    } else {
+                        // By default, install the entire workspace.
+                        InstallTarget::NonProjectWorkspace { workspace, lock }
+                    }
+                }
+            }
+        }
+        SyncTarget::Script(script) => InstallTarget::Script { script, lock },
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -516,19 +566,17 @@ impl Deref for SyncEnvironment {
 pub(super) async fn do_sync(
     target: InstallTarget<'_>,
     venv: &PythonEnvironment,
-    extras: &ExtrasSpecification,
-    dev: &DevGroupsManifest,
+    extras: &ExtrasSpecificationWithDefaults,
+    dev: &DependencyGroupsWithDefaults,
     editable: EditableMode,
     install_options: InstallOptions,
     modifications: Modifications,
     settings: InstallerSettingsRef<'_>,
+    network_settings: &NetworkSettings,
     state: &PlatformState,
     logger: Box<dyn InstallLogger>,
     installer_metadata: bool,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     cache: &Cache,
     dry_run: DryRun,
     printer: Printer,
@@ -632,12 +680,13 @@ pub(super) async fn do_sync(
 
     // Initialize the registry client.
     let client = RegistryClientBuilder::new(cache.clone())
-        .native_tls(native_tls)
-        .connectivity(connectivity)
+        .native_tls(network_settings.native_tls)
+        .connectivity(network_settings.connectivity)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone())
+        .url_auth_policies(UrlAuthPolicies::from(index_locations))
         .index_urls(index_locations.index_urls())
         .index_strategy(index_strategy)
         .keyring(keyring_provider)
-        .allow_insecure_host(allow_insecure_host.to_vec())
         .markers(venv.interpreter().markers())
         .platform(venv.interpreter().platform())
         .build();
@@ -651,9 +700,11 @@ pub(super) async fn do_sync(
         BuildIsolation::SharedPackage(venv, no_build_isolation_package)
     };
 
+    // Read the build constraints from the lockfile.
+    let build_constraints = target.build_constraints();
+
     // TODO(charlie): These are all default values. We should consider whether we want to make them
     // optional on the downstream APIs.
-    let build_constraints = Constraints::default();
     let build_hasher = HashStrategy::default();
 
     // Extract the hashes from the lockfile.
@@ -661,9 +712,9 @@ pub(super) async fn do_sync(
 
     // Resolve the flat indexes from `--find-links`.
     let flat_index = {
-        let client = FlatIndexClient::new(&client, cache);
+        let client = FlatIndexClient::new(client.cached_client(), client.connectivity(), cache);
         let entries = client
-            .fetch(index_locations.flat_indexes().map(Index::url))
+            .fetch_all(index_locations.flat_indexes().map(Index::url))
             .await?;
         FlatIndex::from_entries(entries, Some(tags), &hasher, build_options)
     };
@@ -686,6 +737,7 @@ pub(super) async fn do_sync(
         &build_hasher,
         exclude_newer,
         sources,
+        WorkspaceCache::default(),
         concurrency,
         preview,
     );

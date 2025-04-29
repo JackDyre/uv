@@ -7,6 +7,7 @@ use std::{collections::BTreeSet, ffi::OsString};
 use tracing::{debug, warn};
 use uv_cache::Cache;
 use uv_client::BaseClientBuilder;
+use uv_distribution_types::Requirement;
 use uv_distribution_types::{InstalledDist, Name};
 #[cfg(unix)]
 use uv_fs::replace_symlink;
@@ -14,7 +15,6 @@ use uv_fs::Simplified;
 use uv_installer::SitePackages;
 use uv_pep440::{Version, VersionSpecifier, VersionSpecifiers};
 use uv_pep508::PackageName;
-use uv_pypi_types::Requirement;
 use uv_python::{
     EnvironmentPreference, Interpreter, PythonDownloads, PythonEnvironment, PythonInstallation,
     PythonPreference, PythonRequest, PythonVariant, VersionRequest,
@@ -168,6 +168,7 @@ pub(crate) fn install_executables(
     requirements: Vec<Requirement>,
     constraints: Vec<Requirement>,
     overrides: Vec<Requirement>,
+    build_constraints: Vec<Requirement>,
     printer: Printer,
 ) -> anyhow::Result<ExitStatus> {
     let site_packages = SitePackages::from_environment(environment)?;
@@ -289,6 +290,7 @@ pub(crate) fn install_executables(
         requirements,
         constraints,
         overrides,
+        build_constraints,
         python,
         target_entry_points
             .into_iter()
@@ -301,18 +303,18 @@ pub(crate) fn install_executables(
     if !Shell::contains_path(&executable_directory) {
         if let Some(shell) = Shell::from_env() {
             if let Some(command) = shell.prepend_path(&executable_directory) {
-                if shell.configuration_files().is_empty() {
-                    warn_user!(
-                        "`{}` is not on your PATH. To use installed tools, run `{}`.",
-                        executable_directory.simplified_display().cyan(),
-                        command.green()
-                    );
-                } else {
+                if shell.supports_update() {
                     warn_user!(
                         "`{}` is not on your PATH. To use installed tools, run `{}` or `{}`.",
                         executable_directory.simplified_display().cyan(),
                         command.green(),
                         "uv tool update-shell".green()
+                    );
+                } else {
+                    warn_user!(
+                        "`{}` is not on your PATH. To use installed tools, run `{}`.",
+                        executable_directory.simplified_display().cyan(),
+                        command.green()
                     );
                 }
             } else {

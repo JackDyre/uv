@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use fs2::FileExt;
@@ -23,7 +24,7 @@ pub fn is_same_file_allow_missing(left: &Path, right: &Path) -> Option<bool> {
     // Second, check the files directly.
     if let Ok(value) = same_file::is_same_file(left, right) {
         return Some(value);
-    };
+    }
 
     // Often, one of the directories won't exist yet so perform the comparison up a level.
     if let (Some(left_parent), Some(right_parent), Some(left_name), Some(right_name)) = (
@@ -37,7 +38,7 @@ pub fn is_same_file_allow_missing(left: &Path, right: &Path) -> Option<bool> {
             Ok(false) => return Some(false),
             _ => (),
         }
-    };
+    }
 
     // We couldn't determine if they're the same.
     None
@@ -105,7 +106,7 @@ pub fn replace_symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io:
         },
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
         Err(err) => return Err(err),
-    };
+    }
 
     // Replace it with a new symlink.
     junction::create(
@@ -410,7 +411,7 @@ pub async fn persist_with_retry(
                         to.display(),
                         error_message,
                     );
-                };
+                }
             })
             .await;
 
@@ -484,7 +485,7 @@ pub fn persist_with_retry_sync(
                         to.display(),
                         error_message,
                     );
-                };
+                }
             })
             .call();
 
@@ -516,60 +517,69 @@ pub fn persist_with_retry_sync(
 /// Iterate over the subdirectories of a directory.
 ///
 /// If the directory does not exist, returns an empty iterator.
-pub fn directories(path: impl AsRef<Path>) -> impl Iterator<Item = PathBuf> {
-    path.as_ref()
-        .read_dir()
-        .ok()
+pub fn directories(path: impl AsRef<Path>) -> Result<impl Iterator<Item = PathBuf>, io::Error> {
+    let entries = match path.as_ref().read_dir() {
+        Ok(entries) => Some(entries),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => None,
+        Err(err) => return Err(err),
+    };
+    Ok(entries
         .into_iter()
         .flatten()
         .filter_map(|entry| match entry {
             Ok(entry) => Some(entry),
             Err(err) => {
-                warn!("Failed to read entry: {}", err);
+                warn!("Failed to read entry: {err}");
                 None
             }
         })
         .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_dir()))
-        .map(|entry| entry.path())
+        .map(|entry| entry.path()))
 }
 
 /// Iterate over the entries in a directory.
 ///
 /// If the directory does not exist, returns an empty iterator.
-pub fn entries(path: impl AsRef<Path>) -> impl Iterator<Item = PathBuf> {
-    path.as_ref()
-        .read_dir()
-        .ok()
+pub fn entries(path: impl AsRef<Path>) -> Result<impl Iterator<Item = PathBuf>, io::Error> {
+    let entries = match path.as_ref().read_dir() {
+        Ok(entries) => Some(entries),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => None,
+        Err(err) => return Err(err),
+    };
+    Ok(entries
         .into_iter()
         .flatten()
         .filter_map(|entry| match entry {
             Ok(entry) => Some(entry),
             Err(err) => {
-                warn!("Failed to read entry: {}", err);
+                warn!("Failed to read entry: {err}");
                 None
             }
         })
-        .map(|entry| entry.path())
+        .map(|entry| entry.path()))
 }
 
 /// Iterate over the files in a directory.
 ///
 /// If the directory does not exist, returns an empty iterator.
-pub fn files(path: impl AsRef<Path>) -> impl Iterator<Item = PathBuf> {
-    path.as_ref()
-        .read_dir()
-        .ok()
+pub fn files(path: impl AsRef<Path>) -> Result<impl Iterator<Item = PathBuf>, io::Error> {
+    let entries = match path.as_ref().read_dir() {
+        Ok(entries) => Some(entries),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => None,
+        Err(err) => return Err(err),
+    };
+    Ok(entries
         .into_iter()
         .flatten()
         .filter_map(|entry| match entry {
             Ok(entry) => Some(entry),
             Err(err) => {
-                warn!("Failed to read entry: {}", err);
+                warn!("Failed to read entry: {err}");
                 None
             }
         })
         .filter(|entry| entry.file_type().is_ok_and(|file_type| file_type.is_file()))
-        .map(|entry| entry.path())
+        .map(|entry| entry.path()))
 }
 
 /// Returns `true` if a path is a temporary file or directory.

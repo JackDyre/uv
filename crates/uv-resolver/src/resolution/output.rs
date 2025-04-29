@@ -12,16 +12,14 @@ use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use uv_configuration::{Constraints, Overrides};
 use uv_distribution::Metadata;
 use uv_distribution_types::{
-    Dist, DistributionMetadata, Edge, IndexUrl, Name, Node, ResolutionDiagnostic, ResolvedDist,
-    VersionId, VersionOrUrlRef,
+    Dist, DistributionMetadata, Edge, IndexUrl, Name, Node, Requirement, ResolutionDiagnostic,
+    ResolvedDist, VersionId, VersionOrUrlRef,
 };
 use uv_git::GitResolver;
 use uv_normalize::{ExtraName, GroupName, PackageName};
 use uv_pep440::{Version, VersionSpecifier};
 use uv_pep508::{MarkerEnvironment, MarkerTree, MarkerTreeKind};
-use uv_pypi_types::{
-    Conflicts, HashDigests, ParsedUrlError, Requirement, VerbatimParsedUrl, Yanked,
-};
+use uv_pypi_types::{Conflicts, HashDigests, ParsedUrlError, VerbatimParsedUrl, Yanked};
 
 use crate::graph_ops::{marker_reachability, simplify_conflict_markers};
 use crate::pins::FilePins;
@@ -541,27 +539,48 @@ impl ResolverOutput {
 
         // 3. Look for hashes from the registry, which are served at the package level.
         if url.is_none() {
-            let versions_response = if let Some(index) = index {
-                in_memory.explicit().get(&(name.clone(), index.clone()))
-            } else {
-                in_memory.implicit().get(name)
-            };
+            // Query the implicit and explicit indexes (lazily) for the hashes.
+            let implicit_response = in_memory.implicit().get(name);
+            let mut explicit_response = None;
 
-            if let Some(versions_response) = versions_response {
-                if let VersionsResponse::Found(ref version_maps) = *versions_response {
-                    if let Some(digests) = version_maps
-                        .iter()
-                        .find_map(|version_map| version_map.hashes(version))
-                        .map(|digests| {
-                            let mut digests = HashDigests::from(digests);
-                            digests.sort_unstable();
-                            digests
-                        })
-                    {
-                        if !digests.is_empty() {
-                            return digests;
-                        }
+            // Search in the implicit indexes.
+            let hashes = implicit_response
+                .as_ref()
+                .and_then(|response| {
+                    if let VersionsResponse::Found(version_maps) = &**response {
+                        Some(version_maps)
+                    } else {
+                        None
                     }
+                })
+                .into_iter()
+                .flatten()
+                .filter(|version_map| version_map.index() == index)
+                .find_map(|version_map| version_map.hashes(version))
+                .or_else(|| {
+                    // Search in the explicit indexes.
+                    explicit_response = index
+                        .and_then(|index| in_memory.explicit().get(&(name.clone(), index.clone())));
+                    explicit_response
+                        .as_ref()
+                        .and_then(|response| {
+                            if let VersionsResponse::Found(version_maps) = &**response {
+                                Some(version_maps)
+                            } else {
+                                None
+                            }
+                        })
+                        .into_iter()
+                        .flatten()
+                        .filter(|version_map| version_map.index() == index)
+                        .find_map(|version_map| version_map.hashes(version))
+                });
+
+            if let Some(hashes) = hashes {
+                let mut digests = HashDigests::from(hashes);
+                digests.sort_unstable();
+                if !digests.is_empty() {
+                    return digests;
                 }
             }
         }

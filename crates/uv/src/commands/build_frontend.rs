@@ -10,19 +10,20 @@ use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use thiserror::Error;
 use tracing::instrument;
+use uv_auth::UrlAuthPolicies;
 
 use crate::commands::pip::operations;
 use crate::commands::project::{find_requires_python, ProjectError};
 use crate::commands::reporters::PythonDownloadReporter;
 use crate::commands::ExitStatus;
 use crate::printer::Printer;
-use crate::settings::{ResolverSettings, ResolverSettingsRef};
+use crate::settings::{NetworkSettings, ResolverSettings};
 use uv_build_backend::check_direct_build;
 use uv_cache::{Cache, CacheBucket};
-use uv_client::{BaseClientBuilder, Connectivity, FlatIndexClient, RegistryClientBuilder};
+use uv_client::{BaseClientBuilder, FlatIndexClient, RegistryClientBuilder};
 use uv_configuration::{
     BuildKind, BuildOptions, BuildOutput, Concurrency, ConfigSettings, Constraints,
-    HashCheckingMode, IndexStrategy, KeyringProviderType, PreviewMode, SourceStrategy, TrustedHost,
+    HashCheckingMode, IndexStrategy, KeyringProviderType, PreviewMode, SourceStrategy,
 };
 use uv_dispatch::{BuildDispatch, SharedState};
 use uv_distribution_filename::{
@@ -42,7 +43,7 @@ use uv_requirements::RequirementsSource;
 use uv_resolver::{ExcludeNewer, FlatIndex, RequiresPython};
 use uv_settings::PythonInstallMirrors;
 use uv_types::{AnyErrorBuild, BuildContext, BuildIsolation, BuildStack, HashStrategy};
-use uv_workspace::{DiscoveryOptions, Workspace, WorkspaceError};
+use uv_workspace::{DiscoveryOptions, Workspace, WorkspaceCache, WorkspaceError};
 
 #[derive(Debug, Error)]
 enum Error {
@@ -106,14 +107,12 @@ pub(crate) async fn build_frontend(
     hash_checking: Option<HashCheckingMode>,
     python: Option<String>,
     install_mirrors: PythonInstallMirrors,
-    settings: ResolverSettings,
+    settings: &ResolverSettings,
+    network_settings: &NetworkSettings,
     no_config: bool,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     cache: &Cache,
     printer: Printer,
     preview: PreviewMode,
@@ -133,14 +132,12 @@ pub(crate) async fn build_frontend(
         hash_checking,
         python.as_deref(),
         install_mirrors,
-        settings.as_ref(),
+        settings,
+        network_settings,
         no_config,
         python_preference,
         python_downloads,
-        connectivity,
         concurrency,
-        native_tls,
-        allow_insecure_host,
         cache,
         printer,
         preview,
@@ -178,14 +175,12 @@ async fn build_impl(
     hash_checking: Option<HashCheckingMode>,
     python_request: Option<&str>,
     install_mirrors: PythonInstallMirrors,
-    settings: ResolverSettingsRef<'_>,
+    settings: &ResolverSettings,
+    network_settings: &NetworkSettings,
     no_config: bool,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     cache: &Cache,
     printer: Printer,
     preview: PreviewMode,
@@ -200,7 +195,7 @@ async fn build_impl(
     }
 
     // Extract the resolver settings.
-    let ResolverSettingsRef {
+    let ResolverSettings {
         index_locations,
         index_strategy,
         keyring_provider,
@@ -219,9 +214,9 @@ async fn build_impl(
     } = settings;
 
     let client_builder = BaseClientBuilder::default()
-        .connectivity(connectivity)
-        .native_tls(native_tls)
-        .allow_insecure_host(allow_insecure_host.to_vec());
+        .connectivity(network_settings.connectivity)
+        .native_tls(network_settings.native_tls)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
     // Determine the source to build.
     let src = if let Some(src) = src {
@@ -246,7 +241,13 @@ async fn build_impl(
     };
 
     // Attempt to discover the workspace; on failure, save the error for later.
-    let workspace = Workspace::discover(src.directory(), &DiscoveryOptions::default()).await;
+    let workspace_cache = WorkspaceCache::default();
+    let workspace = Workspace::discover(
+        src.directory(),
+        &DiscoveryOptions::default(),
+        &workspace_cache,
+    )
+    .await;
 
     // If a `--package` or `--all-packages` was provided, adjust the source directory.
     let packages = if let Some(package) = package {
@@ -337,22 +338,20 @@ async fn build_impl(
             build_logs,
             force_pep517,
             build_constraints,
-            no_build_isolation,
+            *no_build_isolation,
             no_build_isolation_package,
-            native_tls,
-            connectivity,
-            index_strategy,
-            keyring_provider,
-            allow_insecure_host,
-            exclude_newer,
-            sources,
+            network_settings,
+            *index_strategy,
+            *keyring_provider,
+            *exclude_newer,
+            *sources,
             concurrency,
             build_options,
             sdist,
             wheel,
             list,
             dependency_metadata,
-            link_mode,
+            *link_mode,
             config_setting,
             preview,
         );
@@ -419,11 +418,9 @@ async fn build_package(
     build_constraints: &[RequirementsSource],
     no_build_isolation: bool,
     no_build_isolation_package: &[PackageName],
-    native_tls: bool,
-    connectivity: Connectivity,
+    network_settings: &NetworkSettings,
     index_strategy: IndexStrategy,
     keyring_provider: KeyringProviderType,
-    allow_insecure_host: &[TrustedHost],
     exclude_newer: Option<ExcludeNewer>,
     sources: SourceStrategy,
     concurrency: Concurrency,
@@ -522,18 +519,19 @@ async fn build_package(
 
     let build_constraints = Constraints::from_requirements(
         build_constraints
-            .iter()
-            .map(|constraint| constraint.requirement.clone()),
+            .into_iter()
+            .map(|constraint| constraint.requirement),
     );
 
     // Initialize the registry client.
     let client = RegistryClientBuilder::new(cache.clone())
-        .native_tls(native_tls)
-        .connectivity(connectivity)
+        .native_tls(network_settings.native_tls)
+        .connectivity(network_settings.connectivity)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone())
+        .url_auth_policies(UrlAuthPolicies::from(index_locations))
         .index_urls(index_locations.index_urls())
         .index_strategy(index_strategy)
         .keyring(keyring_provider)
-        .allow_insecure_host(allow_insecure_host.to_vec())
         .markers(interpreter.markers())
         .platform(interpreter.platform())
         .build();
@@ -552,15 +550,16 @@ async fn build_package(
 
     // Resolve the flat indexes from `--find-links`.
     let flat_index = {
-        let client = FlatIndexClient::new(&client, cache);
+        let client = FlatIndexClient::new(client.cached_client(), client.connectivity(), cache);
         let entries = client
-            .fetch(index_locations.flat_indexes().map(Index::url))
+            .fetch_all(index_locations.flat_indexes().map(Index::url))
             .await?;
         FlatIndex::from_entries(entries, None, &hasher, build_options)
     };
 
     // Initialize any shared state.
     let state = SharedState::default();
+    let workspace_cache = WorkspaceCache::default();
 
     // Create a build dispatch.
     let build_dispatch = BuildDispatch::new(
@@ -580,6 +579,7 @@ async fn build_package(
         &hasher,
         exclude_newer,
         sources,
+        workspace_cache,
         concurrency,
         preview,
     );
@@ -624,7 +624,7 @@ async fn build_package(
                 BuildOutput::Quiet
             }
         }
-        Printer::Quiet => BuildOutput::Quiet,
+        Printer::Quiet | Printer::Silent => BuildOutput::Quiet,
     };
 
     let mut build_results = Vec::new();

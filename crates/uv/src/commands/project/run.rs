@@ -15,26 +15,29 @@ use url::Url;
 
 use uv_cache::Cache;
 use uv_cli::ExternalCommand;
-use uv_client::{BaseClientBuilder, Connectivity};
+use uv_client::BaseClientBuilder;
 use uv_configuration::{
-    Concurrency, DevGroupsSpecification, DryRun, EditableMode, ExtrasSpecification, InstallOptions,
-    PreviewMode, TrustedHost,
+    Concurrency, Constraints, DependencyGroups, DryRun, EditableMode, ExtrasSpecification,
+    InstallOptions, PreviewMode,
 };
+use uv_distribution_types::Requirement;
 use uv_fs::which::is_executable;
 use uv_fs::{PythonExt, Simplified};
 use uv_installer::{SatisfiesResult, SitePackages};
-use uv_normalize::PackageName;
+use uv_normalize::{DefaultExtras, DefaultGroups, PackageName};
 use uv_python::{
-    EnvironmentPreference, Interpreter, PythonDownloads, PythonEnvironment, PythonInstallation,
-    PythonPreference, PythonRequest, PythonVersionFile, VersionFileDiscoveryOptions,
+    EnvironmentPreference, Interpreter, PyVenvConfiguration, PythonDownloads, PythonEnvironment,
+    PythonInstallation, PythonPreference, PythonRequest, PythonVersionFile,
+    VersionFileDiscoveryOptions,
 };
 use uv_requirements::{RequirementsSource, RequirementsSpecification};
 use uv_resolver::Lock;
 use uv_scripts::Pep723Item;
 use uv_settings::PythonInstallMirrors;
+use uv_shell::runnable::WindowsRunnable;
 use uv_static::EnvVars;
 use uv_warnings::warn_user;
-use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace, WorkspaceError};
+use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace, WorkspaceCache, WorkspaceError};
 
 use crate::commands::pip::loggers::{
     DefaultInstallLogger, DefaultResolveLogger, SummaryInstallLogger, SummaryResolveLogger,
@@ -53,7 +56,7 @@ use crate::commands::reporters::PythonDownloadReporter;
 use crate::commands::run::run_to_completion;
 use crate::commands::{diagnostics, project, ExitStatus};
 use crate::printer::Printer;
-use crate::settings::ResolverInstallerSettings;
+use crate::settings::{NetworkSettings, ResolverInstallerSettings};
 
 /// Run a command.
 #[allow(clippy::fn_params_excessive_bools)]
@@ -73,19 +76,17 @@ pub(crate) async fn run(
     no_project: bool,
     no_config: bool,
     extras: ExtrasSpecification,
-    dev: DevGroupsSpecification,
+    dev: DependencyGroups,
     editable: EditableMode,
     modifications: Modifications,
     python: Option<String>,
     install_mirrors: PythonInstallMirrors,
     settings: ResolverInstallerSettings,
+    network_settings: NetworkSettings,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     installer_metadata: bool,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     cache: &Cache,
     printer: Printer,
     env_file: Vec<PathBuf>,
@@ -143,6 +144,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
     // Initialize any shared state.
     let lock_state = UniversalState::default();
     let sync_state = lock_state.fork();
+    let workspace_cache = WorkspaceCache::default();
 
     // Read from the `.env` file, if necessary.
     if !no_env_file {
@@ -218,11 +220,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             let environment = ScriptEnvironment::get_or_init(
                 (&script).into(),
                 python.as_deref().map(PythonRequest::parse),
+                &network_settings,
                 python_preference,
                 python_downloads,
-                connectivity,
-                native_tls,
-                allow_insecure_host,
                 &install_mirrors,
                 no_config,
                 active.map_or(Some(false), Some),
@@ -243,32 +243,32 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             };
 
             // Generate a lockfile.
-            let lock = match project::lock::do_safe_lock(
+            let lock = match project::lock::LockOperation::new(
                 mode,
-                target,
-                settings.as_ref().into(),
+                &settings.resolver,
+                &network_settings,
                 &lock_state,
                 if show_resolution {
                     Box::new(DefaultResolveLogger)
                 } else {
                     Box::new(SummaryResolveLogger)
                 },
-                connectivity,
                 concurrency,
-                native_tls,
-                allow_insecure_host,
                 cache,
                 printer,
                 preview,
             )
+            .execute(target)
             .await
             {
                 Ok(result) => result.into_lock(),
                 Err(ProjectError::Operation(err)) => {
-                    return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                        .with_context("script")
-                        .report(err)
-                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                    return diagnostics::OperationDiagnostic::native_tls(
+                        network_settings.native_tls,
+                    )
+                    .with_context("script")
+                    .report(err)
+                    .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                 }
                 Err(err) => return Err(err.into()),
             };
@@ -284,12 +284,13 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             match project::sync::do_sync(
                 target,
                 &environment,
-                &extras,
-                &dev.with_defaults(Vec::new()),
+                &extras.with_defaults(DefaultExtras::default()),
+                &dev.with_defaults(DefaultGroups::default()),
                 editable,
                 install_options,
                 modifications,
-                settings.as_ref().into(),
+                (&settings).into(),
+                &network_settings,
                 &sync_state,
                 if show_resolution {
                     Box::new(DefaultInstallLogger)
@@ -297,10 +298,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                     Box::new(SummaryInstallLogger)
                 },
                 installer_metadata,
-                connectivity,
                 concurrency,
-                native_tls,
-                allow_insecure_host,
                 cache,
                 DryRun::Disabled,
                 printer,
@@ -310,10 +308,12 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             {
                 Ok(()) => {}
                 Err(ProjectError::Operation(err)) => {
-                    return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                        .with_context("script")
-                        .report(err)
-                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                    return diagnostics::OperationDiagnostic::native_tls(
+                        network_settings.native_tls,
+                    )
+                    .with_context("script")
+                    .report(err)
+                    .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                 }
                 Err(err) => return Err(err.into()),
             }
@@ -335,15 +335,13 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             }
 
             // Install the script requirements, if necessary. Otherwise, use an isolated environment.
-            if let Some(spec) = script_specification((&script).into(), settings.as_ref().into())? {
+            if let Some(spec) = script_specification((&script).into(), &settings.resolver)? {
                 let environment = ScriptEnvironment::get_or_init(
                     (&script).into(),
                     python.as_deref().map(PythonRequest::parse),
+                    &network_settings,
                     python_preference,
                     python_downloads,
-                    connectivity,
-                    native_tls,
-                    allow_insecure_host,
                     &install_mirrors,
                     no_config,
                     active.map_or(Some(false), Some),
@@ -354,11 +352,30 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 .await?
                 .into_environment()?;
 
+                let build_constraints = script
+                    .metadata()
+                    .tool
+                    .as_ref()
+                    .and_then(|tool| {
+                        tool.uv
+                            .as_ref()
+                            .and_then(|uv| uv.build_constraint_dependencies.as_ref())
+                    })
+                    .map(|constraints| {
+                        Constraints::from_requirements(
+                            constraints
+                                .iter()
+                                .map(|constraint| Requirement::from(constraint.clone())),
+                        )
+                    });
+
                 match update_environment(
                     environment,
                     spec,
                     modifications,
+                    build_constraints.unwrap_or_default(),
                     &settings,
+                    &network_settings,
                     &sync_state,
                     if show_resolution {
                         Box::new(DefaultResolveLogger)
@@ -371,11 +388,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                         Box::new(SummaryInstallLogger)
                     },
                     installer_metadata,
-                    connectivity,
                     concurrency,
-                    native_tls,
-                    allow_insecure_host,
                     cache,
+                    workspace_cache,
                     DryRun::Disabled,
                     printer,
                     preview,
@@ -384,10 +399,12 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 {
                     Ok(update) => Some(update.into_environment().into_interpreter()),
                     Err(ProjectError::Operation(err)) => {
-                        return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                            .with_context("script")
-                            .report(err)
-                            .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                        return diagnostics::OperationDiagnostic::native_tls(
+                            network_settings.native_tls,
+                        )
+                        .with_context("script")
+                        .report(err)
+                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                     }
                     Err(err) => return Err(err.into()),
                 }
@@ -396,11 +413,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 let interpreter = ScriptInterpreter::discover(
                     (&script).into(),
                     python.as_deref().map(PythonRequest::parse),
+                    &network_settings,
                     python_preference,
                     python_downloads,
-                    connectivity,
-                    native_tls,
-                    allow_insecure_host,
                     &install_mirrors,
                     no_config,
                     active.map_or(Some(false), Some),
@@ -432,6 +447,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
     let mut lock: Option<(Lock, PathBuf)> = None;
 
     // Discover and sync the base environment.
+    let workspace_cache = WorkspaceCache::default();
     let temp_dir;
     let base_interpreter = if let Some(script_interpreter) = script_interpreter {
         // If we found a PEP 723 script and the user provided a project-only setting, warn.
@@ -473,13 +489,19 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             // We need a workspace, but we don't need to have a current package, we can be e.g. in
             // the root of a virtual workspace and then switch into the selected package.
             Some(VirtualProject::Project(
-                Workspace::discover(project_dir, &DiscoveryOptions::default())
+                Workspace::discover(project_dir, &DiscoveryOptions::default(), &workspace_cache)
                     .await?
                     .with_current_project(package.clone())
                     .with_context(|| format!("Package `{package}` not found in workspace"))?,
             ))
         } else {
-            match VirtualProject::discover(project_dir, &DiscoveryOptions::default()).await {
+            match VirtualProject::discover(
+                project_dir,
+                &DiscoveryOptions::default(),
+                &workspace_cache,
+            )
+            .await
+            {
                 Ok(project) => {
                     if no_project {
                         debug!("Ignoring discovered project due to `--no-project`");
@@ -509,8 +531,8 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
 
         if no_project {
             // If the user ran with `--no-project` and provided a project-only setting, warn.
-            if !extras.is_empty() {
-                warn_user!("Extras have no effect when used alongside `--no-project`");
+            for flag in extras.history().as_flags_pretty() {
+                warn_user!("`{flag}` has no effect when used alongside `--no-project`");
             }
             for flag in dev.history().as_flags_pretty() {
                 warn_user!("`{flag}` has no effect when used alongside `--no-project`");
@@ -526,8 +548,8 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             }
         } else if project.is_none() {
             // If we can't find a project and the user provided a project-only setting, warn.
-            if !extras.is_empty() {
-                warn_user!("Extras have no effect when used outside of a project");
+            for flag in extras.history().as_flags_pretty() {
+                warn_user!("`{flag}` has no effect when used outside of a project");
             }
             for flag in dev.history().as_flags_pretty() {
                 warn_user!("`{flag}` has no effect when used outside of a project");
@@ -559,9 +581,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 // If we're isolating the environment, use an ephemeral virtual environment as the
                 // base environment for the project.
                 let client_builder = BaseClientBuilder::new()
-                    .connectivity(connectivity)
-                    .native_tls(native_tls)
-                    .allow_insecure_host(allow_insecure_host.to_vec());
+                    .connectivity(network_settings.connectivity)
+                    .native_tls(network_settings.native_tls)
+                    .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
                 // Resolve the Python request and requirement for the workspace.
                 let WorkspacePython {
@@ -617,11 +639,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                     project.workspace(),
                     python.as_deref().map(PythonRequest::parse),
                     &install_mirrors,
+                    &network_settings,
                     python_preference,
                     python_downloads,
-                    connectivity,
-                    native_tls,
-                    allow_insecure_host,
                     no_config,
                     active,
                     cache,
@@ -649,7 +669,10 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 // Validate that any referenced dependency groups are defined in the workspace.
 
                 // Determine the default groups to include.
-                let defaults = default_dependency_groups(project.pyproject_toml())?;
+                let default_groups = default_dependency_groups(project.pyproject_toml())?;
+
+                // Determine the default extras to include.
+                let default_extras = DefaultExtras::default();
 
                 // Determine the lock mode.
                 let mode = if frozen {
@@ -660,31 +683,31 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                     LockMode::Write(venv.interpreter())
                 };
 
-                let result = match project::lock::do_safe_lock(
+                let result = match project::lock::LockOperation::new(
                     mode,
-                    project.workspace().into(),
-                    settings.as_ref().into(),
+                    &settings.resolver,
+                    &network_settings,
                     &lock_state,
                     if show_resolution {
                         Box::new(DefaultResolveLogger)
                     } else {
                         Box::new(SummaryResolveLogger)
                     },
-                    connectivity,
                     concurrency,
-                    native_tls,
-                    allow_insecure_host,
                     cache,
                     printer,
                     preview,
                 )
+                .execute(project.workspace().into())
                 .await
                 {
                     Ok(result) => result,
                     Err(ProjectError::Operation(err)) => {
-                        return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                            .report(err)
-                            .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                        return diagnostics::OperationDiagnostic::native_tls(
+                            network_settings.native_tls,
+                        )
+                        .report(err)
+                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                     }
                     Err(err) => return Err(err.into()),
                 };
@@ -735,7 +758,8 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 };
 
                 let install_options = InstallOptions::default();
-                let dev = dev.with_defaults(defaults);
+                let dev = dev.with_defaults(default_groups);
+                let extras = extras.with_defaults(default_extras);
 
                 // Validate that the set of requested extras and development groups are defined in the lockfile.
                 target.validate_extras(&extras)?;
@@ -749,7 +773,8 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                     editable,
                     install_options,
                     modifications,
-                    settings.as_ref().into(),
+                    (&settings).into(),
+                    &network_settings,
                     &sync_state,
                     if show_resolution {
                         Box::new(DefaultInstallLogger)
@@ -757,10 +782,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                         Box::new(SummaryInstallLogger)
                     },
                     installer_metadata,
-                    connectivity,
                     concurrency,
-                    native_tls,
-                    allow_insecure_host,
                     cache,
                     DryRun::Disabled,
                     printer,
@@ -770,9 +792,11 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                 {
                     Ok(()) => {}
                     Err(ProjectError::Operation(err)) => {
-                        return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                            .report(err)
-                            .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                        return diagnostics::OperationDiagnostic::native_tls(
+                            network_settings.native_tls,
+                        )
+                        .report(err)
+                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                     }
                     Err(err) => return Err(err.into()),
                 }
@@ -789,9 +813,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
 
             let interpreter = {
                 let client_builder = BaseClientBuilder::new()
-                    .connectivity(connectivity)
-                    .native_tls(native_tls)
-                    .allow_insecure_host(allow_insecure_host.to_vec());
+                    .connectivity(network_settings.connectivity)
+                    .native_tls(network_settings.native_tls)
+                    .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
                 // (1) Explicit request from user
                 let python_request = if let Some(request) = python.as_deref() {
@@ -857,9 +881,9 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
         None
     } else {
         let client_builder = BaseClientBuilder::new()
-            .connectivity(connectivity)
-            .native_tls(native_tls)
-            .allow_insecure_host(allow_insecure_host.to_vec());
+            .connectivity(network_settings.connectivity)
+            .native_tls(network_settings.native_tls)
+            .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
         let spec =
             RequirementsSpecification::from_simple_sources(&requirements, &client_builder).await?;
@@ -874,13 +898,20 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
         Some(spec) => {
             debug!("Syncing ephemeral requirements");
 
+            // Read the build constraints from the lock file.
+            let build_constraints = lock
+                .as_ref()
+                .map(|(lock, path)| lock.build_constraints(path));
+
             let result = CachedEnvironment::from_spec(
                 EnvironmentSpecification::from(spec).with_lock(
                     lock.as_ref()
                         .map(|(lock, install_path)| (lock, install_path.as_ref())),
                 ),
+                build_constraints.unwrap_or_default(),
                 &base_interpreter,
                 &settings,
+                &network_settings,
                 &sync_state,
                 if show_resolution {
                     Box::new(DefaultResolveLogger)
@@ -893,10 +924,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
                     Box::new(SummaryInstallLogger)
                 },
                 installer_metadata,
-                connectivity,
                 concurrency,
-                native_tls,
-                allow_insecure_host,
                 cache,
                 printer,
                 preview,
@@ -906,10 +934,12 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             let environment = match result {
                 Ok(resolution) => resolution,
                 Err(ProjectError::Operation(err)) => {
-                    return diagnostics::OperationDiagnostic::native_tls(native_tls)
-                        .with_context("`--with`")
-                        .report(err)
-                        .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
+                    return diagnostics::OperationDiagnostic::native_tls(
+                        network_settings.native_tls,
+                    )
+                    .with_context("`--with`")
+                    .report(err)
+                    .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
                 }
                 Err(err) => return Err(err.into()),
             };
@@ -933,6 +963,17 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
             "import site; site.addsitedir(\"{}\")",
             site_packages.escape_for_python()
         ))?;
+
+        // If `--system-site-packages` is enabled, add the system site packages to the ephemeral
+        // environment.
+        if base_interpreter.is_virtualenv()
+            && PyVenvConfiguration::parse(base_interpreter.sys_prefix().join("pyvenv.cfg"))
+                .is_ok_and(|cfg| cfg.include_system_site_packages())
+        {
+            ephemeral_env.set_system_site_packages()?;
+        } else {
+            ephemeral_env.clear_system_site_packages()?;
+        }
     }
 
     // Cast from `CachedEnvironment` to `PythonEnvironment`.
@@ -1052,7 +1093,7 @@ hint: If you are running a script with `{}` in the shebang, you may need to incl
     // Ensure `VIRTUAL_ENV` is set.
     if interpreter.is_virtualenv() {
         process.env(EnvVars::VIRTUAL_ENV, interpreter.sys_prefix().as_os_str());
-    };
+    }
 
     // Spawn and wait for completion
     // Standard input, output, and error streams are all inherited
@@ -1078,9 +1119,10 @@ fn can_skip_ephemeral(
         return false;
     }
 
-    match site_packages.satisfies(
+    match site_packages.satisfies_spec(
         &spec.requirements,
         &spec.constraints,
+        &spec.overrides,
         &base_interpreter.resolver_marker_environment(),
     ) {
         // If the requirements are already satisfied, we're done.
@@ -1091,7 +1133,7 @@ fn can_skip_ephemeral(
                 "Base environment satisfies requirements: {}",
                 recursive_requirements
                     .iter()
-                    .map(|entry| entry.requirement.to_string())
+                    .map(ToString::to_string)
                     .sorted()
                     .join(" | ")
             );
@@ -1286,7 +1328,11 @@ impl RunCommand {
                 process
             }
             Self::External(executable, args) => {
-                let mut process = Command::new(executable);
+                let mut process = if cfg!(windows) {
+                    WindowsRunnable::from_script_path(interpreter.scripts(), executable).into()
+                } else {
+                    Command::new(executable)
+                };
                 process.args(args);
                 process
             }
@@ -1362,12 +1408,10 @@ impl RunCommand {
     #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) async fn from_args(
         command: &ExternalCommand,
+        network_settings: NetworkSettings,
         module: bool,
         script: bool,
         gui_script: bool,
-        connectivity: Connectivity,
-        native_tls: bool,
-        allow_insecure_host: &[TrustedHost],
     ) -> anyhow::Result<Self> {
         let (target, args) = command.split();
         let Some(target) = target else {
@@ -1409,9 +1453,9 @@ impl RunCommand {
                     .tempfile()?;
 
                 let client = BaseClientBuilder::new()
-                    .connectivity(connectivity)
-                    .native_tls(native_tls)
-                    .allow_insecure_host(allow_insecure_host.to_vec())
+                    .connectivity(network_settings.connectivity)
+                    .native_tls(network_settings.native_tls)
+                    .allow_insecure_host(network_settings.allow_insecure_host.clone())
                     .build();
                 let response = client.for_host(&url).get(url.clone()).send().await?;
 

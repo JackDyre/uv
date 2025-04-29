@@ -10,6 +10,7 @@ use tracing::debug;
 use uv_cache::Cache;
 use uv_cache_key::cache_digest;
 use uv_fs::{LockedFile, Simplified};
+use uv_pep440::Version;
 
 use crate::discovery::find_python_installation;
 use crate::installation::PythonInstallation;
@@ -177,7 +178,7 @@ impl PythonEnvironment {
                 }));
             }
             Err(err) => return Err(Error::Discovery(err.into())),
-        };
+        }
 
         if root.as_ref().is_file() {
             return Err(InvalidEnvironment {
@@ -211,7 +212,7 @@ impl PythonEnvironment {
                 kind: InvalidEnvironmentKind::MissingExecutable(executable.clone()),
             }
             .into());
-        };
+        }
 
         let interpreter = Interpreter::query(executable, cache)?;
 
@@ -268,6 +269,16 @@ impl PythonEnvironment {
     /// `pyvenv.cfg` file.
     pub fn cfg(&self) -> Result<PyVenvConfiguration, Error> {
         Ok(PyVenvConfiguration::parse(self.0.root.join("pyvenv.cfg"))?)
+    }
+
+    /// Set a key-value pair in the `pyvenv.cfg` file.
+    pub fn set_pyvenv_cfg(&self, key: &str, value: &str) -> Result<(), Error> {
+        let content = fs_err::read_to_string(self.0.root.join("pyvenv.cfg"))?;
+        fs_err::write(
+            self.0.root.join("pyvenv.cfg"),
+            PyVenvConfiguration::set(&content, key, value),
+        )?;
+        Ok(())
     }
 
     /// Returns `true` if the environment is "relocatable".
@@ -344,5 +355,24 @@ impl PythonEnvironment {
                 )
                 .unwrap_or(false)
         }
+    }
+
+    /// Check if the `pyvenv.cfg` version is the same as the interpreter's Python version.
+    ///
+    /// Returns [`None`] if the versions are the consistent or there is no `pyvenv.cfg`. If the
+    /// versions do not match, returns a tuple of the `pyvenv.cfg` and interpreter's Python versions
+    /// for display.
+    pub fn get_pyvenv_version_conflict(&self) -> Option<(Version, Version)> {
+        let cfg = self.cfg().ok()?;
+        let cfg_version = cfg.version?.into_version();
+
+        // Determine if we should be checking for patch-level equality
+        let exe_version = if cfg_version.release().get(2).is_none() {
+            self.interpreter().python_minor_version()
+        } else {
+            self.interpreter().python_patch_version()
+        };
+
+        (cfg_version != exe_version).then_some((cfg_version, exe_version))
     }
 }

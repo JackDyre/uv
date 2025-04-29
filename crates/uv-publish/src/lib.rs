@@ -1,8 +1,10 @@
 mod trusted_publishing;
 
-use crate::trusted_publishing::TrustedPublishingError;
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use std::{env, fmt, io};
+
 use fs_err::tokio::File;
 use futures::TryStreamExt;
 use glob::{glob, GlobError, PatternError};
@@ -10,33 +12,35 @@ use itertools::Itertools;
 use reqwest::header::AUTHORIZATION;
 use reqwest::multipart::Part;
 use reqwest::{Body, Response, StatusCode};
-use reqwest_middleware::RequestBuilder;
+use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::{RetryPolicy, Retryable, RetryableStrategy};
 use rustc_hash::FxHashSet;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::time::{Duration, SystemTime};
-use std::{env, fmt, io};
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio::sync::Semaphore;
 use tokio_util::io::ReaderStream;
 use tracing::{debug, enabled, trace, warn, Level};
+use trusted_publishing::TrustedPublishingToken;
 use url::Url;
-use uv_client::{BaseClient, OwnedArchive, RegistryClientBuilder, UvRetryableStrategy};
+
+use uv_auth::Credentials;
+use uv_cache::{Cache, Refresh};
+use uv_client::{
+    BaseClient, MetadataFormat, OwnedArchive, RegistryClientBuilder, RequestBuilder,
+    UvRetryableStrategy, DEFAULT_RETRIES,
+};
 use uv_configuration::{KeyringProviderType, TrustedPublishing};
 use uv_distribution_filename::{DistFilename, SourceDistExtension, SourceDistFilename};
+use uv_distribution_types::{IndexCapabilities, IndexUrl};
+use uv_extract::hash::{HashReader, Hasher};
 use uv_fs::{ProgressReader, Simplified};
 use uv_metadata::read_metadata_async_seek;
 use uv_pypi_types::{HashAlgorithm, HashDigest, Metadata23, MetadataError};
 use uv_static::EnvVars;
 use uv_warnings::{warn_user, warn_user_once};
 
-pub use trusted_publishing::TrustedPublishingToken;
-use uv_cache::{Cache, Refresh};
-use uv_distribution_types::{IndexCapabilities, IndexUrl};
-use uv_extract::hash::{HashReader, Hasher};
+use crate::trusted_publishing::TrustedPublishingError;
 
 #[derive(Error, Debug)]
 pub enum PublishError {
@@ -117,9 +121,9 @@ pub enum PublishSendError {
 
 pub trait Reporter: Send + Sync + 'static {
     fn on_progress(&self, name: &str, id: usize);
-    fn on_download_start(&self, name: &str, size: Option<u64>) -> usize;
-    fn on_download_progress(&self, id: usize, inc: u64);
-    fn on_download_complete(&self, id: usize);
+    fn on_upload_start(&self, name: &str, size: Option<u64>) -> usize;
+    fn on_upload_progress(&self, id: usize, inc: u64);
+    fn on_upload_complete(&self, id: usize);
 }
 
 /// Context for using a fresh registry client for check URL requests.
@@ -315,7 +319,9 @@ pub async fn check_trusted_publishing(
             // We could check for credentials from the keyring or netrc the auth middleware first, but
             // given that we are in GitHub Actions we check for trusted publishing first.
             debug!("Running on GitHub Actions without explicit credentials, checking for trusted publishing");
-            match trusted_publishing::get_token(registry, client.for_host(registry)).await {
+            match trusted_publishing::get_token(registry, client.for_host(registry).raw_client())
+                .await
+            {
                 Ok(token) => Ok(TrustedPublishResult::Configured(token)),
                 Err(err) => {
                     // TODO(konsti): It would be useful if we could differentiate between actual errors
@@ -349,7 +355,9 @@ pub async fn check_trusted_publishing(
                 );
             }
 
-            let token = trusted_publishing::get_token(registry, client.for_host(registry)).await?;
+            let token =
+                trusted_publishing::get_token(registry, client.for_host(registry).raw_client())
+                    .await?;
             Ok(TrustedPublishResult::Configured(token))
         }
         TrustedPublishing::Never => Ok(TrustedPublishResult::Skipped),
@@ -367,8 +375,7 @@ pub async fn upload(
     filename: &DistFilename,
     registry: &Url,
     client: &BaseClient,
-    username: Option<&str>,
-    password: Option<&str>,
+    credentials: &Credentials,
     check_url_client: Option<&CheckUrlClient<'_>>,
     download_concurrency: &Semaphore,
     reporter: Arc<impl Reporter>,
@@ -379,7 +386,8 @@ pub async fn upload(
 
     let mut n_past_retries = 0;
     let start_time = SystemTime::now();
-    let retry_policy = client.retry_policy();
+    // N.B. We cannot use the client policy here because it is set to zero retries
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(DEFAULT_RETRIES);
     loop {
         let (request, idx) = build_request(
             file,
@@ -387,8 +395,7 @@ pub async fn upload(
             filename,
             registry,
             client,
-            username,
-            password,
+            credentials,
             &form_metadata,
             reporter.clone(),
         )
@@ -400,7 +407,7 @@ pub async fn upload(
             let retry_decision = retry_policy.should_retry(start_time, n_past_retries);
             if let reqwest_retry::RetryDecision::Retry { execute_after } = retry_decision {
                 warn_user!("Transient failure while handling response for {registry}; retrying...");
-                reporter.on_download_complete(idx);
+                reporter.on_upload_complete(idx);
                 let duration = execute_after
                     .duration_since(SystemTime::now())
                     .unwrap_or_else(|_| Duration::default());
@@ -474,9 +481,9 @@ pub async fn check_url(
 
     debug!("Checking for {filename} in the registry");
     let response = match registry_client
-        .simple(
+        .package_metadata(
             filename.name(),
-            Some(index_url),
+            Some(index_url.into()),
             index_capabilities,
             download_concurrency,
         )
@@ -496,7 +503,7 @@ pub async fn check_url(
             };
         }
     };
-    let [(_, simple_metadata)] = response.as_slice() else {
+    let [(_, MetadataFormat::Simple(simple_metadata))] = response.as_slice() else {
         unreachable!("We queried a single index, we must get a single response");
     };
     let simple_metadata = OwnedArchive::deserialize(simple_metadata);
@@ -734,45 +741,43 @@ async fn form_metadata(
 /// Build the upload request.
 ///
 /// Returns the request and the reporter progress bar id.
-async fn build_request(
+async fn build_request<'a>(
     file: &Path,
     raw_filename: &str,
     filename: &DistFilename,
     registry: &Url,
-    client: &BaseClient,
-    username: Option<&str>,
-    password: Option<&str>,
+    client: &'a BaseClient,
+    credentials: &Credentials,
     form_metadata: &[(&'static str, String)],
     reporter: Arc<impl Reporter>,
-) -> Result<(RequestBuilder, usize), PublishPrepareError> {
+) -> Result<(RequestBuilder<'a>, usize), PublishPrepareError> {
     let mut form = reqwest::multipart::Form::new();
     for (key, value) in form_metadata {
         form = form.text(*key, value.clone());
     }
 
     let file = File::open(file).await?;
-    let idx = reporter.on_download_start(&filename.to_string(), Some(file.metadata().await?.len()));
+    let file_size = file.metadata().await?.len();
+    let idx = reporter.on_upload_start(&filename.to_string(), Some(file_size));
     let reader = ProgressReader::new(file, move |read| {
-        reporter.on_download_progress(idx, read as u64);
+        reporter.on_upload_progress(idx, read as u64);
     });
     // Stream wrapping puts a static lifetime requirement on the reader (so the request doesn't have
     // a lifetime) -> callback needs to be static -> reporter reference needs to be Arc'd.
     let file_reader = Body::wrap_stream(ReaderStream::new(reader));
     // See [`files_for_publishing`] on `raw_filename`
-    let part = Part::stream(file_reader).file_name(raw_filename.to_string());
+    let part = Part::stream_with_length(file_reader, file_size).file_name(raw_filename.to_string());
     form = form.part("content", part);
 
-    let url = if let Some(username) = username {
-        if password.is_none() {
-            // Attach the username to the URL so the authentication middleware can find the matching
-            // password.
-            let mut url = registry.clone();
-            let _ = url.set_username(username);
-            url
-        } else {
-            // We set the authorization header below.
-            registry.clone()
-        }
+    // If we have a username but no password, attach the username to the URL so the authentication
+    // middleware can find the matching password.
+    let url = if let Some(username) = credentials
+        .username()
+        .filter(|_| credentials.password().is_none())
+    {
+        let mut url = registry.clone();
+        let _ = url.set_username(username);
+        url
     } else {
         registry.clone()
     };
@@ -788,11 +793,20 @@ async fn build_request(
             reqwest::header::ACCEPT,
             "application/json;q=0.9, text/plain;q=0.8, text/html;q=0.7",
         );
-    if let (Some(username), Some(password)) = (username, password) {
-        debug!("Using username/password basic auth");
-        let credentials = BASE64_STANDARD.encode(format!("{username}:{password}"));
-        request = request.header(AUTHORIZATION, format!("Basic {credentials}"));
+
+    match credentials {
+        Credentials::Basic { password, .. } => {
+            if password.is_some() {
+                debug!("Using HTTP Basic authentication");
+                request = request.header(AUTHORIZATION, credentials.to_header_value());
+            }
+        }
+        Credentials::Bearer { .. } => {
+            debug!("Using Bearer token authentication");
+            request = request.header(AUTHORIZATION, credentials.to_header_value());
+        }
     }
+
     Ok((request, idx))
 }
 
@@ -870,6 +884,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
     use url::Url;
+    use uv_auth::Credentials;
     use uv_client::BaseClientBuilder;
     use uv_distribution_filename::DistFilename;
 
@@ -877,11 +892,11 @@ mod tests {
 
     impl Reporter for DummyReporter {
         fn on_progress(&self, _name: &str, _id: usize) {}
-        fn on_download_start(&self, _name: &str, _size: Option<u64>) -> usize {
+        fn on_upload_start(&self, _name: &str, _size: Option<u64>) -> usize {
             0
         }
-        fn on_download_progress(&self, _id: usize, _inc: u64) {}
-        fn on_download_complete(&self, _id: usize) {}
+        fn on_upload_progress(&self, _id: usize, _inc: u64) {}
+        fn on_upload_complete(&self, _id: usize) {}
     }
 
     /// Snapshot the data we send for an upload request for a source distribution.
@@ -947,14 +962,14 @@ mod tests {
         project_urls: Source, https://github.com/unknown/tqdm
         "###);
 
+        let client = BaseClientBuilder::new().build();
         let (request, _) = build_request(
             &file,
             raw_filename,
             &filename,
             &Url::parse("https://example.org/upload").unwrap(),
-            &BaseClientBuilder::new().build(),
-            Some("ferris"),
-            Some("F3RR!S"),
+            &client,
+            &Credentials::basic(Some("ferris".to_string()), Some("F3RR!S".to_string())),
             &form_metadata,
             Arc::new(DummyReporter),
         )
@@ -964,34 +979,35 @@ mod tests {
         insta::with_settings!({
             filters => [("boundary=[0-9a-f-]+", "boundary=[...]")],
         }, {
-            assert_debug_snapshot!(&request, @r###"
-        RequestBuilder {
-            inner: RequestBuilder {
-                method: POST,
-                url: Url {
-                    scheme: "https",
-                    cannot_be_a_base: false,
-                    username: "",
-                    password: None,
-                    host: Some(
-                        Domain(
-                            "example.org",
+            assert_debug_snapshot!(&request.raw_builder(), @r#"
+            RequestBuilder {
+                inner: RequestBuilder {
+                    method: POST,
+                    url: Url {
+                        scheme: "https",
+                        cannot_be_a_base: false,
+                        username: "",
+                        password: None,
+                        host: Some(
+                            Domain(
+                                "example.org",
+                            ),
                         ),
-                    ),
-                    port: None,
-                    path: "/upload",
-                    query: None,
-                    fragment: None,
+                        port: None,
+                        path: "/upload",
+                        query: None,
+                        fragment: None,
+                    },
+                    headers: {
+                        "content-type": "multipart/form-data; boundary=[...]",
+                        "content-length": "6803",
+                        "accept": "application/json;q=0.9, text/plain;q=0.8, text/html;q=0.7",
+                        "authorization": Sensitive,
+                    },
                 },
-                headers: {
-                    "content-type": "multipart/form-data; boundary=[...]",
-                    "accept": "application/json;q=0.9, text/plain;q=0.8, text/html;q=0.7",
-                    "authorization": "Basic ZmVycmlzOkYzUlIhUw==",
-                },
-            },
-            ..
-        }
-        "###);
+                ..
+            }
+            "#);
         });
     }
 
@@ -1097,14 +1113,14 @@ mod tests {
         requires_dist: requests ; extra == 'telegram'
         "###);
 
+        let client = BaseClientBuilder::new().build();
         let (request, _) = build_request(
             &file,
             raw_filename,
             &filename,
             &Url::parse("https://example.org/upload").unwrap(),
-            &BaseClientBuilder::new().build(),
-            Some("ferris"),
-            Some("F3RR!S"),
+            &client,
+            &Credentials::basic(Some("ferris".to_string()), Some("F3RR!S".to_string())),
             &form_metadata,
             Arc::new(DummyReporter),
         )
@@ -1114,34 +1130,35 @@ mod tests {
         insta::with_settings!({
             filters => [("boundary=[0-9a-f-]+", "boundary=[...]")],
         }, {
-            assert_debug_snapshot!(&request, @r###"
-        RequestBuilder {
-            inner: RequestBuilder {
-                method: POST,
-                url: Url {
-                    scheme: "https",
-                    cannot_be_a_base: false,
-                    username: "",
-                    password: None,
-                    host: Some(
-                        Domain(
-                            "example.org",
+            assert_debug_snapshot!(&request.raw_builder(), @r#"
+            RequestBuilder {
+                inner: RequestBuilder {
+                    method: POST,
+                    url: Url {
+                        scheme: "https",
+                        cannot_be_a_base: false,
+                        username: "",
+                        password: None,
+                        host: Some(
+                            Domain(
+                                "example.org",
+                            ),
                         ),
-                    ),
-                    port: None,
-                    path: "/upload",
-                    query: None,
-                    fragment: None,
+                        port: None,
+                        path: "/upload",
+                        query: None,
+                        fragment: None,
+                    },
+                    headers: {
+                        "content-type": "multipart/form-data; boundary=[...]",
+                        "content-length": "19330",
+                        "accept": "application/json;q=0.9, text/plain;q=0.8, text/html;q=0.7",
+                        "authorization": Sensitive,
+                    },
                 },
-                headers: {
-                    "content-type": "multipart/form-data; boundary=[...]",
-                    "accept": "application/json;q=0.9, text/plain;q=0.8, text/html;q=0.7",
-                    "authorization": "Basic ZmVycmlzOkYzUlIhUw==",
-                },
-            },
-            ..
-        }
-        "###);
+                ..
+            }
+            "#);
         });
     }
 }

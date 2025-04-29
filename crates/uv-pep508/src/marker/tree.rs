@@ -931,14 +931,14 @@ impl MarkerTree {
                                     MarkerWarningKind::LexicographicComparison,
                                     format!("Comparing {l_string} and {value} lexicographically"),
                                 );
-                            };
+                            }
 
                             if let Bound::Included(value) | Bound::Excluded(value) = end {
                                 reporter.report(
                                     MarkerWarningKind::LexicographicComparison,
                                     format!("Comparing {l_string} and {value} lexicographically"),
                                 );
-                            };
+                            }
                         }
                     }
 
@@ -1711,7 +1711,7 @@ impl schemars::JsonSchema for MarkerTree {
         "MarkerTree".to_string()
     }
 
-    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         schemars::schema::SchemaObject {
             instance_type: Some(schemars::schema::InstanceType::String.into()),
             metadata: Some(Box::new(schemars::schema::Metadata {

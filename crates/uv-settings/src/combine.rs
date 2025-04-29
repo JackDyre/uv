@@ -4,14 +4,15 @@ use std::path::PathBuf;
 use url::Url;
 
 use uv_configuration::{
-    ConfigSettings, IndexStrategy, KeyringProviderType, RequiredVersion, TargetTriple,
-    TrustedPublishing,
+    ConfigSettings, ExportFormat, IndexStrategy, KeyringProviderType, RequiredVersion,
+    TargetTriple, TrustedPublishing,
 };
 use uv_distribution_types::{Index, IndexUrl, PipExtraIndex, PipFindLinks, PipIndex};
 use uv_install_wheel::LinkMode;
 use uv_pypi_types::{SchemaConflicts, SupportedEnvironments};
 use uv_python::{PythonDownloads, PythonPreference, PythonVersion};
 use uv_resolver::{AnnotationStyle, ExcludeNewer, ForkStrategy, PrereleaseMode, ResolutionMode};
+use uv_torch::TorchMode;
 
 use crate::{FilesystemOptions, Options, PipOptions};
 
@@ -74,6 +75,7 @@ macro_rules! impl_combine_or {
 
 impl_combine_or!(AnnotationStyle);
 impl_combine_or!(ExcludeNewer);
+impl_combine_or!(ExportFormat);
 impl_combine_or!(ForkStrategy);
 impl_combine_or!(Index);
 impl_combine_or!(IndexStrategy);
@@ -95,6 +97,7 @@ impl_combine_or!(SchemaConflicts);
 impl_combine_or!(String);
 impl_combine_or!(SupportedEnvironments);
 impl_combine_or!(TargetTriple);
+impl_combine_or!(TorchMode);
 impl_combine_or!(TrustedPublishing);
 impl_combine_or!(Url);
 impl_combine_or!(bool);

@@ -8,13 +8,12 @@ use owo_colors::OwoColorize;
 use tracing::debug;
 
 use uv_cache::Cache;
-use uv_client::Connectivity;
 use uv_configuration::{
-    Concurrency, DevGroupsSpecification, DryRun, EditableMode, ExtrasSpecification, InstallOptions,
-    PreviewMode, TrustedHost,
+    Concurrency, DependencyGroups, DryRun, EditableMode, ExtrasSpecification, InstallOptions,
+    PreviewMode,
 };
 use uv_fs::Simplified;
-use uv_normalize::DEV_DEPENDENCIES;
+use uv_normalize::{DefaultExtras, DEV_DEPENDENCIES};
 use uv_pep508::PackageName;
 use uv_python::{PythonDownloads, PythonPreference, PythonRequest};
 use uv_scripts::{Pep723ItemRef, Pep723Metadata, Pep723Script};
@@ -22,7 +21,7 @@ use uv_settings::PythonInstallMirrors;
 use uv_warnings::warn_user_once;
 use uv_workspace::pyproject::DependencyType;
 use uv_workspace::pyproject_mut::{DependencyTarget, PyProjectTomlMut};
-use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace};
+use uv_workspace::{DiscoveryOptions, VirtualProject, Workspace, WorkspaceCache};
 
 use crate::commands::pip::loggers::{DefaultInstallLogger, DefaultResolveLogger};
 use crate::commands::pip::operations::Modifications;
@@ -36,7 +35,7 @@ use crate::commands::project::{
 };
 use crate::commands::{diagnostics, project, ExitStatus};
 use crate::printer::Printer;
-use crate::settings::ResolverInstallerSettings;
+use crate::settings::{NetworkSettings, ResolverInstallerSettings};
 
 /// Remove one or more packages from the project requirements.
 #[allow(clippy::fn_params_excessive_bools)]
@@ -52,14 +51,12 @@ pub(crate) async fn remove(
     python: Option<String>,
     install_mirrors: PythonInstallMirrors,
     settings: ResolverInstallerSettings,
+    network_settings: NetworkSettings,
     script: Option<Pep723Script>,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     installer_metadata: bool,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     no_config: bool,
     cache: &Cache,
     printer: Printer,
@@ -90,15 +87,25 @@ pub(crate) async fn remove(
         RemoveTarget::Script(script)
     } else {
         // Find the project in the workspace.
+        // No workspace caching since `uv remove` changes the workspace definition.
         let project = if let Some(package) = package {
             VirtualProject::Project(
-                Workspace::discover(project_dir, &DiscoveryOptions::default())
-                    .await?
-                    .with_current_project(package.clone())
-                    .with_context(|| format!("Package `{package}` not found in workspace"))?,
+                Workspace::discover(
+                    project_dir,
+                    &DiscoveryOptions::default(),
+                    &WorkspaceCache::default(),
+                )
+                .await?
+                .with_current_project(package.clone())
+                .with_context(|| format!("Package `{package}` not found in workspace"))?,
             )
         } else {
-            VirtualProject::discover(project_dir, &DiscoveryOptions::default()).await?
+            VirtualProject::discover(
+                project_dir,
+                &DiscoveryOptions::default(),
+                &WorkspaceCache::default(),
+            )
+            .await?
         };
 
         RemoveTarget::Project(project)
@@ -204,11 +211,9 @@ pub(crate) async fn remove(
                     project.workspace(),
                     project_dir,
                     python.as_deref().map(PythonRequest::parse),
+                    &network_settings,
                     python_preference,
                     python_downloads,
-                    connectivity,
-                    native_tls,
-                    allow_insecure_host,
                     &install_mirrors,
                     no_config,
                     active,
@@ -225,11 +230,9 @@ pub(crate) async fn remove(
                     project.workspace(),
                     python.as_deref().map(PythonRequest::parse),
                     &install_mirrors,
+                    &network_settings,
                     python_preference,
                     python_downloads,
-                    connectivity,
-                    native_tls,
-                    allow_insecure_host,
                     no_config,
                     active,
                     cache,
@@ -246,11 +249,9 @@ pub(crate) async fn remove(
             let interpreter = ScriptInterpreter::discover(
                 Pep723ItemRef::Script(&script),
                 python.as_deref().map(PythonRequest::parse),
+                &network_settings,
                 python_preference,
                 python_downloads,
-                connectivity,
-                native_tls,
-                allow_insecure_host,
                 &install_mirrors,
                 no_config,
                 active,
@@ -275,25 +276,23 @@ pub(crate) async fn remove(
     let state = UniversalState::default();
 
     // Lock and sync the environment, if necessary.
-    let lock = match project::lock::do_safe_lock(
+    let lock = match project::lock::LockOperation::new(
         mode,
-        (&target).into(),
-        settings.as_ref().into(),
+        &settings.resolver,
+        &network_settings,
         &state,
         Box::new(DefaultResolveLogger),
-        connectivity,
         concurrency,
-        native_tls,
-        allow_insecure_host,
         cache,
         printer,
         preview,
     )
+    .execute((&target).into())
     .await
     {
         Ok(result) => result.into_lock(),
         Err(ProjectError::Operation(err)) => {
-            return diagnostics::OperationDiagnostic::native_tls(native_tls)
+            return diagnostics::OperationDiagnostic::native_tls(network_settings.native_tls)
                 .report(err)
                 .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
         }
@@ -312,11 +311,14 @@ pub(crate) async fn remove(
 
     // Perform a full sync, because we don't know what exactly is affected by the removal.
     // TODO(ibraheem): Should we accept CLI overrides for this? Should we even sync here?
-    let extras = ExtrasSpecification::All;
+    let extras = ExtrasSpecification::from_all_extras();
     let install_options = InstallOptions::default();
 
     // Determine the default groups to include.
-    let defaults = default_dependency_groups(project.pyproject_toml())?;
+    let default_groups = default_dependency_groups(project.pyproject_toml())?;
+
+    // Determine the default extras to include.
+    let default_extras = DefaultExtras::default();
 
     // Identify the installation target.
     let target = match &project {
@@ -336,19 +338,17 @@ pub(crate) async fn remove(
     match project::sync::do_sync(
         target,
         venv,
-        &extras,
-        &DevGroupsSpecification::default().with_defaults(defaults),
+        &extras.with_defaults(default_extras),
+        &DependencyGroups::default().with_defaults(default_groups),
         EditableMode::Editable,
         install_options,
         Modifications::Exact,
-        settings.as_ref().into(),
+        (&settings).into(),
+        &network_settings,
         &state,
         Box::new(DefaultInstallLogger),
         installer_metadata,
-        connectivity,
         concurrency,
-        native_tls,
-        allow_insecure_host,
         cache,
         DryRun::Disabled,
         printer,
@@ -358,7 +358,7 @@ pub(crate) async fn remove(
     {
         Ok(()) => {}
         Err(ProjectError::Operation(err)) => {
-            return diagnostics::OperationDiagnostic::native_tls(native_tls)
+            return diagnostics::OperationDiagnostic::native_tls(network_settings.native_tls)
                 .report(err)
                 .map_or(Ok(ExitStatus::Failure), |err| Err(err.into()))
         }

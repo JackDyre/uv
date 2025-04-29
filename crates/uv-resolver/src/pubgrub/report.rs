@@ -11,7 +11,7 @@ use rustc_hash::FxHashMap;
 use uv_configuration::{IndexStrategy, NoBinary, NoBuild};
 use uv_distribution_types::{
     IncompatibleDist, IncompatibleSource, IncompatibleWheel, Index, IndexCapabilities,
-    IndexLocations, IndexUrl,
+    IndexLocations, IndexMetadata, IndexUrl,
 };
 use uv_normalize::PackageName;
 use uv_pep440::{Version, VersionSpecifiers};
@@ -711,7 +711,7 @@ impl PubGrubReportFormatter<'_> {
                     output_hints,
                 );
             }
-        };
+        }
     }
 
     /// Generate a [`PubGrubHint`] for a package that doesn't have any wheels matching the current
@@ -727,7 +727,7 @@ impl PubGrubReportFormatter<'_> {
         env: &ResolverEnvironment,
         tags: Option<&Tags>,
     ) -> Option<PubGrubHint> {
-        let response = if let Some(url) = fork_indexes.get(name) {
+        let response = if let Some(url) = fork_indexes.get(name).map(IndexMetadata::url) {
             index.explicit().get(&(name.clone(), url.clone()))
         } else {
             index.implicit().get(name)
@@ -895,21 +895,29 @@ impl PubGrubReportFormatter<'_> {
         // Add hints due to the package being available on an index, but not at the correct version,
         // with subsequent indexes that were _not_ queried.
         if matches!(selector.index_strategy(), IndexStrategy::FirstIndex) {
-            if let Some(found_index) = available_indexes.get(name).and_then(BTreeSet::first) {
-                // Determine whether the index is the last-available index. If not, then some
-                // indexes were not queried, and could contain a compatible version.
-                if let Some(next_index) = index_locations
-                    .indexes()
-                    .map(Index::url)
-                    .skip_while(|url| *url != found_index)
-                    .nth(1)
-                {
-                    hints.insert(PubGrubHint::UncheckedIndex {
-                        name: name.clone(),
-                        range: set.clone(),
-                        found_index: found_index.clone(),
-                        next_index: next_index.clone(),
-                    });
+            // Do not include the hint if the set is "all versions". This is an unusual but valid
+            // case in which a package returns a 200 response, but without any versions or
+            // distributions for the package.
+            if !set
+                .iter()
+                .all(|range| matches!(range, (Bound::Unbounded, Bound::Unbounded)))
+            {
+                if let Some(found_index) = available_indexes.get(name).and_then(BTreeSet::first) {
+                    // Determine whether the index is the last-available index. If not, then some
+                    // indexes were not queried, and could contain a compatible version.
+                    if let Some(next_index) = index_locations
+                        .indexes()
+                        .map(Index::url)
+                        .skip_while(|url| *url != found_index)
+                        .nth(1)
+                    {
+                        hints.insert(PubGrubHint::UncheckedIndex {
+                            name: name.clone(),
+                            range: set.clone(),
+                            found_index: found_index.clone(),
+                            next_index: next_index.clone(),
+                        });
+                    }
                 }
             }
         }
@@ -1949,7 +1957,7 @@ impl std::fmt::Display for PackageRange<'_> {
                 (Bound::Excluded(v), Bound::Unbounded) => write!(f, "{package}>{v}")?,
                 (Bound::Excluded(v), Bound::Included(b)) => write!(f, "{package}>{v},<={b}")?,
                 (Bound::Excluded(v), Bound::Excluded(b)) => write!(f, "{package}>{v},<{b}")?,
-            };
+            }
         }
         if segments.len() > 1 {
             writeln!(f)?;
@@ -2007,7 +2015,7 @@ impl std::fmt::Display for DependsOn<'_> {
             write!(f, "depend on ")?;
         } else {
             write!(f, "depends on ")?;
-        };
+        }
 
         match self.dependency2 {
             Some(ref dependency2) => write!(

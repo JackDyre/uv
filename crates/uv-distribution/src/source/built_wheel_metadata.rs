@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use uv_cache::CacheShard;
@@ -15,9 +15,9 @@ use uv_pypi_types::{HashDigest, HashDigests};
 #[derive(Debug, Clone)]
 pub(crate) struct BuiltWheelMetadata {
     /// The path to the built wheel.
-    pub(crate) path: PathBuf,
+    pub(crate) path: Box<Path>,
     /// The expected path to the downloaded wheel's entry in the cache.
-    pub(crate) target: PathBuf,
+    pub(crate) target: Box<Path>,
     /// The parsed filename.
     pub(crate) filename: WheelFilename,
     /// The computed hashes of the source distribution from which the wheel was built.
@@ -28,16 +28,19 @@ pub(crate) struct BuiltWheelMetadata {
 
 impl BuiltWheelMetadata {
     /// Find a compatible wheel in the cache.
-    pub(crate) fn find_in_cache(tags: &Tags, cache_shard: &CacheShard) -> Option<Self> {
-        for directory in files(cache_shard) {
-            if let Some(metadata) = Self::from_path(directory, cache_shard) {
+    pub(crate) fn find_in_cache(
+        tags: &Tags,
+        cache_shard: &CacheShard,
+    ) -> Result<Option<Self>, std::io::Error> {
+        for file in files(cache_shard)? {
+            if let Some(metadata) = Self::from_path(file, cache_shard) {
                 // Validate that the wheel is compatible with the target platform.
                 if metadata.filename.is_compatible(tags) {
-                    return Some(metadata);
+                    return Ok(Some(metadata));
                 }
             }
         }
-        None
+        Ok(None)
     }
 
     /// Try to parse a distribution from a cached directory name (like `typing-extensions-4.8.0-py3-none-any.whl`).
@@ -45,8 +48,8 @@ impl BuiltWheelMetadata {
         let filename = path.file_name()?.to_str()?;
         let filename = WheelFilename::from_str(filename).ok()?;
         Some(Self {
-            target: cache_shard.join(filename.stem()),
-            path,
+            target: cache_shard.join(filename.stem()).into_boxed_path(),
+            path: path.into_boxed_path(),
             filename,
             cache_info: CacheInfo::default(),
             hashes: HashDigests::empty(),

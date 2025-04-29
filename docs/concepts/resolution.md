@@ -183,7 +183,7 @@ install the resulting built distribution.
 Some packages (like PyTorch) publish built distributions, but omit a source distribution. Such
 packages are _only_ installable on platforms for which a built distribution is available. For
 example, if a package publishes built distributions for Linux, but not macOS or Windows, then that
-package will _only_ be installable on Windows.
+package will _only_ be installable on Linux.
 
 Packages that lack source distributions cause problems for universal resolution, since there will
 typically be at least one platform or Python version for which the package is not installable.
@@ -218,7 +218,7 @@ required-environments = [
 
 ## Dependency preferences
 
-If resolution output file exists, i.e. a uv lockfile (`uv.lock`) or a requirements output file
+If resolution output file exists, i.e., a uv lockfile (`uv.lock`) or a requirements output file
 (`requirements.txt`), uv will _prefer_ the dependency versions listed there. Similarly, if
 installing a package into a virtual environment, uv will prefer the already installed version if
 present. This means that locked or installed versions will not change unless an incompatible version

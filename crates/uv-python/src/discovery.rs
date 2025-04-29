@@ -1,5 +1,6 @@
 use itertools::{Either, Itertools};
 use regex::Regex;
+use rustc_hash::{FxBuildHasher, FxHashSet};
 use same_file::is_same_file;
 use std::env::consts::EXE_SUFFIX;
 use std::fmt::{self, Debug, Formatter};
@@ -12,7 +13,10 @@ use which::{which, which_all};
 use uv_cache::Cache;
 use uv_fs::which::is_executable;
 use uv_fs::Simplified;
-use uv_pep440::{Prerelease, Version, VersionSpecifier, VersionSpecifiers};
+use uv_pep440::{
+    release_specifiers_to_ranges, LowerBound, Prerelease, UpperBound, Version, VersionSpecifier,
+    VersionSpecifiers,
+};
 use uv_static::EnvVars;
 use uv_warnings::warn_user_once;
 
@@ -235,7 +239,7 @@ pub enum Error {
     InvalidVersionRequest(String),
 
     // TODO(zanieb): Is this error case necessary still? We should probably drop it.
-    #[error("Interpreter discovery for `{0}` requires `{1}` but only {2} is allowed")]
+    #[error("Interpreter discovery for `{0}` requires `{1}` but only `{2}` is allowed")]
     SourceNotAllowed(PythonRequest, PythonSource, PythonPreference),
 }
 
@@ -493,6 +497,7 @@ fn python_executables_from_search_path<'a>(
     // check multiple names per directory while respecting the search path order and python names
     // precedence.
     let search_dirs: Vec<_> = env::split_paths(&search_path).collect();
+    let mut seen_dirs = FxHashSet::with_capacity_and_hasher(search_dirs.len(), FxBuildHasher);
     search_dirs
         .into_iter()
         .filter(|dir| dir.is_dir())
@@ -503,33 +508,50 @@ fn python_executables_from_search_path<'a>(
                 "Checking `PATH` directory for interpreters: {}",
                 dir.display()
             );
-            possible_names
-                .clone()
-                .into_iter()
-                .flat_map(move |name| {
-                    // Since we're just working with a single directory at a time, we collect to simplify ownership
-                    which::which_in_global(&*name, Some(&dir))
-                        .into_iter()
-                        .flatten()
-                        // We have to collect since `which` requires that the regex outlives its
-                        // parameters, and the dir is local while we return the iterator.
-                        .collect::<Vec<_>>()
+            same_file::Handle::from_path(&dir)
+                // Skip directories we've already seen, to avoid inspecting interpreters multiple
+                // times when directories are repeated or symlinked in the `PATH`
+                .map(|handle| seen_dirs.insert(handle))
+                .inspect(|fresh_dir| {
+                    if !fresh_dir {
+                        trace!("Skipping already seen directory: {}", dir.display());
+                    }
                 })
-                .chain(find_all_minor(implementation, version, &dir_clone))
-                .filter(|path| !is_windows_store_shim(path))
-                .inspect(|path| trace!("Found possible Python executable: {}", path.display()))
-                .chain(
-                    // TODO(zanieb): Consider moving `python.bat` into `possible_names` to avoid a chain
-                    cfg!(windows)
-                        .then(move || {
-                            which::which_in_global("python.bat", Some(&dir_clone))
+                // If we cannot determine if the directory is unique, we'll assume it is
+                .unwrap_or(true)
+                .then(|| {
+                    possible_names
+                        .clone()
+                        .into_iter()
+                        .flat_map(move |name| {
+                            // Since we're just working with a single directory at a time, we collect to simplify ownership
+                            which::which_in_global(&*name, Some(&dir))
                                 .into_iter()
                                 .flatten()
+                                // We have to collect since `which` requires that the regex outlives its
+                                // parameters, and the dir is local while we return the iterator.
                                 .collect::<Vec<_>>()
                         })
-                        .into_iter()
-                        .flatten(),
-                )
+                        .chain(find_all_minor(implementation, version, &dir_clone))
+                        .filter(|path| !is_windows_store_shim(path))
+                        .inspect(|path| {
+                            trace!("Found possible Python executable: {}", path.display());
+                        })
+                        .chain(
+                            // TODO(zanieb): Consider moving `python.bat` into `possible_names` to avoid a chain
+                            cfg!(windows)
+                                .then(move || {
+                                    which::which_in_global("python.bat", Some(&dir_clone))
+                                        .into_iter()
+                                        .flatten()
+                                        .collect::<Vec<_>>()
+                                })
+                                .into_iter()
+                                .flatten(),
+                        )
+                })
+                .into_iter()
+                .flatten()
         })
 }
 
@@ -956,7 +978,7 @@ pub fn find_python_installations<'a>(
         PythonRequest::Version(version) => {
             if let Err(err) = version.check_supported() {
                 return Box::new(iter::once(Err(Error::InvalidVersionRequest(err))));
-            };
+            }
             Box::new({
                 debug!("Searching for {request} in {sources}");
                 python_interpreters(version, None, environments, preference, cache)
@@ -982,7 +1004,7 @@ pub fn find_python_installations<'a>(
         PythonRequest::ImplementationVersion(implementation, version) => {
             if let Err(err) = version.check_supported() {
                 return Box::new(iter::once(Err(Error::InvalidVersionRequest(err))));
-            };
+            }
             Box::new({
                 debug!("Searching for {request} in {sources}");
                 python_interpreters(
@@ -1004,8 +1026,8 @@ pub fn find_python_installations<'a>(
             if let Some(version) = request.version() {
                 if let Err(err) = version.check_supported() {
                     return Box::new(iter::once(Err(Error::InvalidVersionRequest(err))));
-                };
-            };
+                }
+            }
             Box::new({
                 debug!("Searching for {request} in {sources}");
                 python_interpreters(
@@ -2178,7 +2200,23 @@ impl VersionRequest {
                 (*self_major, *self_minor) == (major, minor)
             }
             Self::Range(specifiers, _) => {
-                specifiers.contains(&Version::new([u64::from(major), u64::from(minor)]))
+                let range = release_specifiers_to_ranges(specifiers.clone());
+                let Some((lower, upper)) = range.bounding_range() else {
+                    return true;
+                };
+                let version = Version::new([u64::from(major), u64::from(minor)]);
+
+                let lower = LowerBound::new(lower.cloned());
+                if !lower.major_minor().contains(&version) {
+                    return false;
+                }
+
+                let upper = UpperBound::new(upper.cloned());
+                if !upper.major_minor().contains(&version) {
+                    return false;
+                }
+
+                true
             }
             Self::MajorMinorPrerelease(self_major, self_minor, _, _) => {
                 (*self_major, *self_minor) == (major, minor)
@@ -2256,9 +2294,9 @@ impl VersionRequest {
         match self {
             Self::Default => false,
             Self::Any => true,
-            Self::Major(..) => true,
-            Self::MajorMinor(..) => true,
-            Self::MajorMinorPatch(..) => true,
+            Self::Major(..) => false,
+            Self::MajorMinor(..) => false,
+            Self::MajorMinorPatch(..) => false,
             Self::MajorMinorPrerelease(..) => true,
             Self::Range(specifiers, _) => specifiers.iter().any(VersionSpecifier::any_prerelease),
         }
@@ -2667,12 +2705,15 @@ mod tests {
     use std::{path::PathBuf, str::FromStr};
 
     use assert_fs::{prelude::*, TempDir};
+    use target_lexicon::{Aarch64Architecture, Architecture};
     use test_log::test;
     use uv_pep440::{Prerelease, PrereleaseKind, VersionSpecifiers};
 
     use crate::{
         discovery::{PythonRequest, VersionRequest},
+        downloads::PythonDownloadRequest,
         implementation::ImplementationName,
+        platform::{Arch, Libc, Os},
     };
 
     use super::{Error, PythonVariant};
@@ -2725,6 +2766,7 @@ mod tests {
             PythonRequest::parse("cpython"),
             PythonRequest::Implementation(ImplementationName::CPython)
         );
+
         assert_eq!(
             PythonRequest::parse("cpython3.12.2"),
             PythonRequest::ImplementationVersion(
@@ -2732,6 +2774,78 @@ mod tests {
                 VersionRequest::from_str("3.12.2").unwrap(),
             )
         );
+
+        assert_eq!(
+            PythonRequest::parse("cpython-3.13.2"),
+            PythonRequest::Key(PythonDownloadRequest {
+                version: Some(VersionRequest::MajorMinorPatch(
+                    3,
+                    13,
+                    2,
+                    PythonVariant::Default
+                )),
+                implementation: Some(ImplementationName::CPython),
+                arch: None,
+                os: None,
+                libc: None,
+                prereleases: None
+            })
+        );
+        assert_eq!(
+            PythonRequest::parse("cpython-3.13.2-macos-aarch64-none"),
+            PythonRequest::Key(PythonDownloadRequest {
+                version: Some(VersionRequest::MajorMinorPatch(
+                    3,
+                    13,
+                    2,
+                    PythonVariant::Default
+                )),
+                implementation: Some(ImplementationName::CPython),
+                arch: Some(Arch {
+                    family: Architecture::Aarch64(Aarch64Architecture::Aarch64),
+                    variant: None
+                }),
+                os: Some(Os(target_lexicon::OperatingSystem::Darwin(None))),
+                libc: Some(Libc::None),
+                prereleases: None
+            })
+        );
+        assert_eq!(
+            PythonRequest::parse("any-3.13.2"),
+            PythonRequest::Key(PythonDownloadRequest {
+                version: Some(VersionRequest::MajorMinorPatch(
+                    3,
+                    13,
+                    2,
+                    PythonVariant::Default
+                )),
+                implementation: None,
+                arch: None,
+                os: None,
+                libc: None,
+                prereleases: None
+            })
+        );
+        assert_eq!(
+            PythonRequest::parse("any-3.13.2-any-aarch64"),
+            PythonRequest::Key(PythonDownloadRequest {
+                version: Some(VersionRequest::MajorMinorPatch(
+                    3,
+                    13,
+                    2,
+                    PythonVariant::Default
+                )),
+                implementation: None,
+                arch: Some(Arch {
+                    family: Architecture::Aarch64(Aarch64Architecture::Aarch64),
+                    variant: None
+                }),
+                os: None,
+                libc: None,
+                prereleases: None
+            })
+        );
+
         assert_eq!(
             PythonRequest::parse("pypy"),
             PythonRequest::Implementation(ImplementationName::PyPy)

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::str::FromStr;
 
 use jiff::Timestamp;
@@ -35,23 +36,11 @@ fn sorted_simple_json_files<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<File>
 /// A single (remote) file belonging to a package, either a wheel or a source distribution.
 ///
 /// <https://peps.python.org/pep-0691/#project-detail>
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone)]
 pub struct File {
-    // PEP 714-renamed field, followed by PEP 691-compliant field, followed by non-PEP 691-compliant
-    // alias used by PyPI.
-    //
-    // TODO(charlie): Use a single value here and move this into the deserializer, to save space.
     pub core_metadata: Option<CoreMetadata>,
-    pub dist_info_metadata: Option<CoreMetadata>,
-    pub data_dist_info_metadata: Option<CoreMetadata>,
     pub filename: SmallString,
     pub hashes: Hashes,
-    /// There are a number of invalid specifiers on PyPI, so we first try to parse it into a
-    /// [`VersionSpecifiers`] according to spec (PEP 440), then a [`LenientVersionSpecifiers`] with
-    /// fixup for some common problems and if this still fails, we skip the file when creating a
-    /// version map.
-    #[serde(default, deserialize_with = "deserialize_version_specifiers_lenient")]
     pub requires_python: Option<Result<VersionSpecifiers, VersionSpecifiersParseError>>,
     pub size: Option<u64>,
     pub upload_time: Option<Timestamp>,
@@ -59,43 +48,77 @@ pub struct File {
     pub yanked: Option<Box<Yanked>>,
 }
 
-fn deserialize_version_specifiers_lenient<'de, D>(
-    deserializer: D,
-) -> Result<Option<Result<VersionSpecifiers, VersionSpecifiersParseError>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct Visitor;
+impl<'de> Deserialize<'de> for File {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct FileVisitor;
 
-    impl<'de> serde::de::Visitor<'de> for Visitor {
-        type Value = Option<Result<VersionSpecifiers, VersionSpecifiersParseError>>;
+        impl<'de> serde::de::Visitor<'de> for FileVisitor {
+            type Value = File;
 
-        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.write_str("a string representing a version specifier")
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a map containing file metadata")
+            }
+
+            fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+            where
+                M: serde::de::MapAccess<'de>,
+            {
+                let mut core_metadata = None;
+                let mut filename = None;
+                let mut hashes = None;
+                let mut requires_python = None;
+                let mut size = None;
+                let mut upload_time = None;
+                let mut url = None;
+                let mut yanked = None;
+
+                while let Some(key) = access.next_key::<String>()? {
+                    match key.as_str() {
+                        "core-metadata" | "dist-info-metadata" | "data-dist-info-metadata" => {
+                            if core_metadata.is_none() {
+                                core_metadata = access.next_value()?;
+                            } else {
+                                let _: serde::de::IgnoredAny = access.next_value()?;
+                            }
+                        }
+                        "filename" => filename = Some(access.next_value()?),
+                        "hashes" => hashes = Some(access.next_value()?),
+                        "requires-python" => {
+                            requires_python =
+                                access.next_value::<Option<Cow<'_, str>>>()?.map(|s| {
+                                    LenientVersionSpecifiers::from_str(s.as_ref())
+                                        .map(VersionSpecifiers::from)
+                                });
+                        }
+                        "size" => size = Some(access.next_value()?),
+                        "upload-time" => upload_time = Some(access.next_value()?),
+                        "url" => url = Some(access.next_value()?),
+                        "yanked" => yanked = Some(access.next_value()?),
+                        _ => {
+                            let _: serde::de::IgnoredAny = access.next_value()?;
+                        }
+                    }
+                }
+
+                Ok(File {
+                    core_metadata,
+                    filename: filename
+                        .ok_or_else(|| serde::de::Error::missing_field("filename"))?,
+                    hashes: hashes.ok_or_else(|| serde::de::Error::missing_field("hashes"))?,
+                    requires_python,
+                    size,
+                    upload_time,
+                    url: url.ok_or_else(|| serde::de::Error::missing_field("url"))?,
+                    yanked,
+                })
+            }
         }
 
-        fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Self::Value, E> {
-            Ok(Some(
-                LenientVersionSpecifiers::from_str(v).map(VersionSpecifiers::from),
-            ))
-        }
-
-        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            deserializer.deserialize_str(Visitor)
-        }
-
-        fn visit_none<E>(self) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(None)
-        }
+        deserializer.deserialize_map(FileVisitor)
     }
-
-    deserializer.deserialize_option(Visitor)
 }
 
 #[derive(Debug, Clone)]
@@ -162,11 +185,15 @@ impl Default for Yanked {
 /// A dictionary mapping a hash name to a hex encoded digest of the file.
 ///
 /// PEP 691 says multiple hashes can be included and the interpretation is left to the client.
-#[derive(Debug, Clone, Eq, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Default, Deserialize, Serialize)]
 pub struct Hashes {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub md5: Option<SmallString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sha256: Option<SmallString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sha384: Option<SmallString>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sha512: Option<SmallString>,
 }
 
@@ -464,6 +491,21 @@ impl From<Hashes> for HashDigests {
             });
         }
         Self::from(digests)
+    }
+}
+
+impl From<HashDigests> for Hashes {
+    fn from(value: HashDigests) -> Self {
+        let mut hashes = Hashes::default();
+        for digest in value {
+            match digest.algorithm() {
+                HashAlgorithm::Md5 => hashes.md5 = Some(digest.digest),
+                HashAlgorithm::Sha256 => hashes.sha256 = Some(digest.digest),
+                HashAlgorithm::Sha384 => hashes.sha384 = Some(digest.digest),
+                HashAlgorithm::Sha512 => hashes.sha512 = Some(digest.digest),
+            }
+        }
+        hashes
     }
 }
 

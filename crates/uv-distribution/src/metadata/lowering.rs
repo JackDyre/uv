@@ -7,14 +7,14 @@ use thiserror::Error;
 use url::Url;
 
 use uv_distribution_filename::DistExtension;
-use uv_distribution_types::{Index, IndexLocations, IndexName, Origin};
+use uv_distribution_types::{
+    Index, IndexLocations, IndexMetadata, IndexName, Origin, Requirement, RequirementSource,
+};
 use uv_git_types::{GitReference, GitUrl, GitUrlParseError};
 use uv_normalize::{ExtraName, GroupName, PackageName};
 use uv_pep440::VersionSpecifiers;
 use uv_pep508::{looks_like_git_repository, MarkerTree, VerbatimUrl, VersionOrUrl};
-use uv_pypi_types::{
-    ConflictItem, ParsedUrlError, Requirement, RequirementSource, VerbatimParsedUrl,
-};
+use uv_pypi_types::{ConflictItem, ParsedUrlError, VerbatimParsedUrl};
 use uv_workspace::pyproject::{PyProjectToml, Source, Sources};
 use uv_workspace::Workspace;
 
@@ -43,7 +43,6 @@ impl LoweredRequirement {
         group: Option<&GroupName>,
         locations: &'data IndexLocations,
         workspace: &'data Workspace,
-
         git_member: Option<&'data GitWorkspaceMember<'data>>,
     ) -> impl Iterator<Item = Result<Self, LoweringError>> + 'data {
         // Identify the source from the `tool.uv.sources` table.
@@ -172,7 +171,7 @@ impl LoweredRequirement {
                         } => {
                             let source = git_source(
                                 &git,
-                                subdirectory.map(PathBuf::from),
+                                subdirectory.map(Box::<Path>::from),
                                 rev,
                                 tag,
                                 branch,
@@ -186,22 +185,24 @@ impl LoweredRequirement {
                             ..
                         } => {
                             let source =
-                                url_source(&requirement, url, subdirectory.map(PathBuf::from))?;
+                                url_source(&requirement, url, subdirectory.map(Box::<Path>::from))?;
                             (source, marker)
                         }
                         Source::Path {
                             path,
                             editable,
+                            package,
                             marker,
                             ..
                         } => {
                             let source = path_source(
-                                PathBuf::from(path),
+                                path,
                                 git_member,
                                 origin,
                                 project_dir,
                                 workspace.install_path(),
-                                editable.unwrap_or(false),
+                                editable,
+                                package,
                             )?;
                             (source, marker)
                         }
@@ -221,7 +222,14 @@ impl LoweredRequirement {
                                 .find(|Index { name, .. }| {
                                     name.as_ref().is_some_and(|name| *name == index)
                                 })
-                                .map(|Index { url: index, .. }| index.clone())
+                                .map(
+                                    |Index {
+                                         url, format: kind, ..
+                                     }| IndexMetadata {
+                                        url: url.clone(),
+                                        format: *kind,
+                                    },
+                                )
                             else {
                                 return Err(LoweringError::MissingIndex(
                                     requirement.name.clone(),
@@ -237,7 +245,7 @@ impl LoweredRequirement {
                                     })
                                 }
                             });
-                            let source = registry_source(&requirement, index.into_url(), conflict);
+                            let source = registry_source(&requirement, index, conflict);
                             (source, marker)
                         }
                         Source::Workspace {
@@ -295,20 +303,20 @@ impl LoweredRequirement {
                                     subdirectory: if subdirectory == PathBuf::new() {
                                         None
                                     } else {
-                                        Some(subdirectory)
+                                        Some(subdirectory.into_boxed_path())
                                     },
                                     url,
                                 }
                             } else if member.pyproject_toml().is_package() {
                                 RequirementSource::Directory {
-                                    install_path,
+                                    install_path: install_path.into_boxed_path(),
                                     url,
                                     editable: true,
                                     r#virtual: false,
                                 }
                             } else {
                                 RequirementSource::Directory {
-                                    install_path,
+                                    install_path: install_path.into_boxed_path(),
                                     url,
                                     editable: false,
                                     r#virtual: true,
@@ -323,7 +331,7 @@ impl LoweredRequirement {
                     Ok(Self(Requirement {
                         name: requirement.name.clone(),
                         extras: requirement.extras.clone(),
-                        groups: vec![],
+                        groups: Box::new([]),
                         marker,
                         source,
                         origin: requirement.origin.clone(),
@@ -401,7 +409,7 @@ impl LoweredRequirement {
                         } => {
                             let source = git_source(
                                 &git,
-                                subdirectory.map(PathBuf::from),
+                                subdirectory.map(Box::<Path>::from),
                                 rev,
                                 tag,
                                 branch,
@@ -415,22 +423,24 @@ impl LoweredRequirement {
                             ..
                         } => {
                             let source =
-                                url_source(&requirement, url, subdirectory.map(PathBuf::from))?;
+                                url_source(&requirement, url, subdirectory.map(Box::<Path>::from))?;
                             (source, marker)
                         }
                         Source::Path {
                             path,
                             editable,
+                            package,
                             marker,
                             ..
                         } => {
                             let source = path_source(
-                                PathBuf::from(path),
+                                path,
                                 None,
                                 RequirementOrigin::Project,
                                 dir,
                                 dir,
-                                editable.unwrap_or(false),
+                                editable,
+                                package,
                             )?;
                             (source, marker)
                         }
@@ -442,7 +452,14 @@ impl LoweredRequirement {
                                 .find(|Index { name, .. }| {
                                     name.as_ref().is_some_and(|name| *name == index)
                                 })
-                                .map(|Index { url: index, .. }| index.clone())
+                                .map(
+                                    |Index {
+                                         url, format: kind, ..
+                                     }| IndexMetadata {
+                                        url: url.clone(),
+                                        format: *kind,
+                                    },
+                                )
                             else {
                                 return Err(LoweringError::MissingIndex(
                                     requirement.name.clone(),
@@ -450,7 +467,7 @@ impl LoweredRequirement {
                                 ));
                             };
                             let conflict = None;
-                            let source = registry_source(&requirement, index.into_url(), conflict);
+                            let source = registry_source(&requirement, index, conflict);
                             (source, marker)
                         }
                         Source::Workspace { .. } => {
@@ -463,7 +480,7 @@ impl LoweredRequirement {
                     Ok(Self(Requirement {
                         name: requirement.name.clone(),
                         extras: requirement.extras.clone(),
-                        groups: vec![],
+                        groups: Box::new([]),
                         marker,
                         source,
                         origin: requirement.origin.clone(),
@@ -511,8 +528,10 @@ pub enum LoweringError {
     MissingGitSource(PackageName, Url),
     #[error("`workspace = false` is not yet supported")]
     WorkspaceFalse,
-    #[error("Editable must refer to a local directory, not a file: `{0}`")]
+    #[error("Source with `editable = true` must refer to a local directory, not a file: `{0}`")]
     EditableFile(String),
+    #[error("Source with `package = true` must refer to a local directory, not a file: `{0}`")]
+    PackagedFile(String),
     #[error("Git repository references local file source, but only directories are supported as transitive Git dependencies: `{0}`")]
     GitFile(String),
     #[error(transparent)]
@@ -545,7 +564,7 @@ impl std::fmt::Display for SourceKind {
 /// Convert a Git source into a [`RequirementSource`].
 fn git_source(
     git: &Url,
-    subdirectory: Option<PathBuf>,
+    subdirectory: Option<Box<Path>>,
     rev: Option<String>,
     tag: Option<String>,
     branch: Option<String>,
@@ -566,7 +585,7 @@ fn git_source(
     if let Some(subdirectory) = subdirectory.as_ref() {
         let subdirectory = subdirectory
             .to_str()
-            .ok_or_else(|| LoweringError::NonUtf8Path(subdirectory.clone()))?;
+            .ok_or_else(|| LoweringError::NonUtf8Path(subdirectory.to_path_buf()))?;
         url.set_fragment(Some(&format!("subdirectory={subdirectory}")));
     }
     let url = VerbatimUrl::from_url(url);
@@ -584,7 +603,7 @@ fn git_source(
 fn url_source(
     requirement: &uv_pep508::Requirement<VerbatimParsedUrl>,
     url: Url,
-    subdirectory: Option<PathBuf>,
+    subdirectory: Option<Box<Path>>,
 ) -> Result<RequirementSource, LoweringError> {
     let mut verbatim_url = url.clone();
     if verbatim_url.fragment().is_some() {
@@ -593,7 +612,7 @@ fn url_source(
     if let Some(subdirectory) = subdirectory.as_ref() {
         let subdirectory = subdirectory
             .to_str()
-            .ok_or_else(|| LoweringError::NonUtf8Path(subdirectory.clone()))?;
+            .ok_or_else(|| LoweringError::NonUtf8Path(subdirectory.to_path_buf()))?;
         verbatim_url.set_fragment(Some(&format!("subdirectory={subdirectory}")));
     }
 
@@ -622,7 +641,7 @@ fn url_source(
 /// Convert a registry source into a [`RequirementSource`].
 fn registry_source(
     requirement: &uv_pep508::Requirement<VerbatimParsedUrl>,
-    index: Url,
+    index: IndexMetadata,
     conflict: Option<ConflictItem>,
 ) -> RequirementSource {
     match &requirement.version_or_url {
@@ -651,7 +670,8 @@ fn path_source(
     origin: RequirementOrigin,
     project_dir: &Path,
     workspace_root: &Path,
-    editable: bool,
+    editable: Option<bool>,
+    package: Option<bool>,
 ) -> Result<RequirementSource, LoweringError> {
     let path = path.as_ref();
     let base = match origin {
@@ -681,38 +701,36 @@ fn path_source(
                 subdirectory: if subdirectory == PathBuf::new() {
                     None
                 } else {
-                    Some(subdirectory)
+                    Some(subdirectory.into_boxed_path())
                 },
                 url,
             });
         }
 
-        if editable {
+        if editable == Some(true) {
             Ok(RequirementSource::Directory {
-                install_path,
+                install_path: install_path.into_boxed_path(),
                 url,
-                editable,
+                editable: true,
                 r#virtual: false,
             })
         } else {
             // Determine whether the project is a package or virtual.
-            let is_package = {
+            let is_package = package.unwrap_or_else(|| {
                 let pyproject_path = install_path.join("pyproject.toml");
                 fs_err::read_to_string(&pyproject_path)
                     .ok()
                     .and_then(|contents| PyProjectToml::from_string(contents).ok())
                     .map(|pyproject_toml| pyproject_toml.is_package())
                     .unwrap_or(true)
-            };
-
-            // If a project is not a package, treat it as a virtual dependency.
-            let r#virtual = !is_package;
+            });
 
             Ok(RequirementSource::Directory {
-                install_path,
+                install_path: install_path.into_boxed_path(),
                 url,
-                editable,
-                r#virtual,
+                editable: false,
+                // If a project is not a package, treat it as a virtual dependency.
+                r#virtual: !is_package,
             })
         }
     } else {
@@ -720,13 +738,16 @@ fn path_source(
         if git_member.is_some() {
             return Err(LoweringError::GitFile(url.to_string()));
         }
-        if editable {
+        if editable == Some(true) {
             return Err(LoweringError::EditableFile(url.to_string()));
+        }
+        if package == Some(true) {
+            return Err(LoweringError::PackagedFile(url.to_string()));
         }
         Ok(RequirementSource::Path {
             ext: DistExtension::from_path(&install_path)
                 .map_err(|err| ParsedUrlError::MissingExtensionPath(path.to_path_buf(), err))?,
-            install_path,
+            install_path: install_path.into_boxed_path(),
             url,
         })
     }

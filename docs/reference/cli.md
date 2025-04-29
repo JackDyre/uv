@@ -92,7 +92,7 @@ uv run [OPTIONS] [COMMAND]
 
 <p>Any extras or groups specified via <code>--extra</code>, <code>--group</code>, or related options will be applied to all workspace members.</p>
 
-</dd><dt id="uv-run--allow-insecure-host"><a href="#uv-run--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-run--allow-insecure-host"><a href="#uv-run--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -121,7 +121,7 @@ uv run [OPTIONS] [COMMAND]
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-run--compile-bytecode"><a href="#uv-run--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-run--compile-bytecode"><a href="#uv-run--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -133,7 +133,7 @@ uv run [OPTIONS] [COMMAND]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-run--config-setting"><a href="#uv-run--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-run--config-setting"><a href="#uv-run--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-run--default-index"><a href="#uv-run--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -284,6 +284,11 @@ uv run [OPTIONS] [COMMAND]
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-run--managed-python"><a href="#uv-run--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-run--module"><a href="#uv-run--module"><code>--module</code></a>, <code>-m</code></dt><dd><p>Run a Python module.</p>
 
 <p>Equivalent to <code>python -m &lt;module&gt;</code>.</p>
@@ -307,6 +312,7 @@ uv run [OPTIONS] [COMMAND]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-run--no-build-isolation"><a href="#uv-run--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -318,7 +324,8 @@ uv run [OPTIONS] [COMMAND]
 
 </dd><dt id="uv-run--no-build-package"><a href="#uv-run--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-run--no-cache"><a href="#uv-run--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-run--no-cache"><a href="#uv-run--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-run--no-config"><a href="#uv-run--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -326,7 +333,7 @@ uv run [OPTIONS] [COMMAND]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
-</dd><dt id="uv-run--no-default-groups"><a href="#uv-run--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the the default dependency groups.</p>
+</dd><dt id="uv-run--no-default-groups"><a href="#uv-run--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the default dependency groups.</p>
 
 <p>uv includes the groups defined in <code>tool.uv.default-groups</code> by default. This disables that option, however, specific groups can still be included with <code>--group</code>.</p>
 
@@ -338,6 +345,7 @@ uv run [OPTIONS] [COMMAND]
 
 </dd><dt id="uv-run--no-editable"><a href="#uv-run--no-editable"><code>--no-editable</code></a></dt><dd><p>Install any editable dependencies, including the project and any workspace members, as non-editable</p>
 
+<p>May also be set with the <code>UV_NO_EDITABLE</code> environment variable.</p>
 </dd><dt id="uv-run--no-env-file"><a href="#uv-run--no-env-file"><code>--no-env-file</code></a></dt><dd><p>Avoid reading environment variables from a <code>.env</code> file</p>
 
 <p>May also be set with the <code>UV_NO_ENV_FILE</code> environment variable.</p>
@@ -347,18 +355,23 @@ uv run [OPTIONS] [COMMAND]
 
 </dd><dt id="uv-run--no-group"><a href="#uv-run--no-group"><code>--no-group</code></a> <i>no-group</i></dt><dd><p>Disable the specified dependency group.</p>
 
-<p>This options always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
+<p>This option always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
 
 <p>May be provided multiple times.</p>
 
 </dd><dt id="uv-run--no-index"><a href="#uv-run--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-run--no-managed-python"><a href="#uv-run--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-run--no-progress"><a href="#uv-run--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
 
 <p>May also be set with the <code>UV_NO_PROGRESS</code> environment variable.</p>
-</dd><dt id="uv-run--no-project"><a href="#uv-run--no-project"><code>--no-project</code></a></dt><dd><p>Avoid discovering the project or workspace.</p>
+</dd><dt id="uv-run--no-project"><a href="#uv-run--no-project"><code>--no-project</code></a>, <code>--no_workspace</code></dt><dd><p>Avoid discovering the project or workspace.</p>
 
 <p>Instead of searching for projects in the current directory and parent directories, run in an isolated, ephemeral environment populated by the <code>--with</code> requirements.</p>
 
@@ -422,6 +435,7 @@ uv run [OPTIONS] [COMMAND]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-run--python"><a href="#uv-run--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for the run environment.</p>
 
 <p>If the interpreter request is satisfied by a discovered environment, the environment will be used.</p>
@@ -429,29 +443,15 @@ uv run [OPTIONS] [COMMAND]
 <p>See <a href="#uv-python">uv python</a> to view supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-run--python-preference"><a href="#uv-run--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-run--quiet"><a href="#uv-run--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-run--quiet"><a href="#uv-run--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-run--refresh"><a href="#uv-run--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-run--refresh-package"><a href="#uv-run--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-run--reinstall"><a href="#uv-run--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-run--reinstall"><a href="#uv-run--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-run--reinstall-package"><a href="#uv-run--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -529,7 +529,7 @@ uv init [OPTIONS] [PATH]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-init--allow-insecure-host"><a href="#uv-init--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-init--allow-insecure-host"><a href="#uv-init--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -538,7 +538,7 @@ uv init [OPTIONS] [PATH]
 <p>WARNING: Hosts included in this list will not be verified against the system&#8217;s certificate store. Only use <code>--allow-insecure-host</code> in a secure network with verified sources, as it bypasses SSL verification and could expose you to MITM attacks.</p>
 
 <p>May also be set with the <code>UV_INSECURE_HOST</code> environment variable.</p>
-</dd><dt id="uv-init--app"><a href="#uv-init--app"><code>--app</code></a></dt><dd><p>Create a project for an application.</p>
+</dd><dt id="uv-init--app"><a href="#uv-init--app"><code>--app</code></a>, <code>--application</code></dt><dd><p>Create a project for an application.</p>
 
 <p>This is the default behavior if <code>--lib</code> is not requested.</p>
 
@@ -575,6 +575,8 @@ uv init [OPTIONS] [PATH]
 <li><code>flit</code>:  Use <a href='https://pypi.org/project/flit-core'>flit-core</a> as the project build backend</li>
 
 <li><code>pdm</code>:  Use <a href='https://pypi.org/project/pdm-backend'>pdm-backend</a> as the project build backend</li>
+
+<li><code>poetry</code>:  Use <a href='https://pypi.org/project/poetry-core'>poetry-core</a> as the project build backend</li>
 
 <li><code>setuptools</code>:  Use <a href='https://pypi.org/project/setuptools'>setuptools</a> as the project build backend</li>
 
@@ -617,10 +619,15 @@ uv init [OPTIONS] [PATH]
 
 </dd><dt id="uv-init--help"><a href="#uv-init--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
-</dd><dt id="uv-init--lib"><a href="#uv-init--lib"><code>--lib</code></a></dt><dd><p>Create a project for a library.</p>
+</dd><dt id="uv-init--lib"><a href="#uv-init--lib"><code>--lib</code></a>, <code>--library</code></dt><dd><p>Create a project for a library.</p>
 
 <p>A library is a project that is intended to be built and distributed as a Python package.</p>
 
+</dd><dt id="uv-init--managed-python"><a href="#uv-init--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-init--name"><a href="#uv-init--name"><code>--name</code></a> <i>name</i></dt><dd><p>The name of the project.</p>
 
 <p>Defaults to the name of the directory.</p>
@@ -632,7 +639,7 @@ uv init [OPTIONS] [PATH]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-init--no-cache"><a href="#uv-init--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-init--no-cache"><a href="#uv-init--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-init--no-config"><a href="#uv-init--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -642,6 +649,11 @@ uv init [OPTIONS] [PATH]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-init--no-description"><a href="#uv-init--no-description"><code>--no-description</code></a></dt><dd><p>Disable the description for the project</p>
 
+</dd><dt id="uv-init--no-managed-python"><a href="#uv-init--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-init--no-package"><a href="#uv-init--no-package"><code>--no-package</code></a></dt><dd><p>Do not set up the project to be built as a Python package.</p>
 
 <p>Does not include a <code>[build-system]</code> for the project.</p>
@@ -661,7 +673,7 @@ uv init [OPTIONS] [PATH]
 
 </dd><dt id="uv-init--no-readme"><a href="#uv-init--no-readme"><code>--no-readme</code></a></dt><dd><p>Do not create a <code>README.md</code> file</p>
 
-</dd><dt id="uv-init--no-workspace"><a href="#uv-init--no-workspace"><code>--no-workspace</code></a></dt><dd><p>Avoid discovering a workspace and create a standalone project.</p>
+</dd><dt id="uv-init--no-workspace"><a href="#uv-init--no-workspace"><code>--no-workspace</code></a>, <code>--no-project</code></dt><dd><p>Avoid discovering a workspace and create a standalone project.</p>
 
 <p>By default, uv searches for workspaces in the current directory or any parent directory.</p>
 
@@ -688,28 +700,15 @@ uv init [OPTIONS] [PATH]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-init--python"><a href="#uv-init--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use to determine the minimum supported Python version.</p>
 
 <p>See <a href="#uv-python">uv python</a> to view supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-init--python-preference"><a href="#uv-init--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-init--quiet"><a href="#uv-init--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-init--quiet"><a href="#uv-init--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-init--script"><a href="#uv-init--script"><code>--script</code></a></dt><dd><p>Create a script.</p>
 
@@ -772,7 +771,7 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 <p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
 
-</dd><dt id="uv-add--allow-insecure-host"><a href="#uv-add--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-add--allow-insecure-host"><a href="#uv-add--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -803,7 +802,7 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-add--compile-bytecode"><a href="#uv-add--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-add--compile-bytecode"><a href="#uv-add--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -815,8 +814,15 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-add--config-setting"><a href="#uv-add--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-add--config-setting"><a href="#uv-add--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
+</dd><dt id="uv-add--constraints"><a href="#uv-add--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+
+<p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. The constraints will <em>not</em> be added to the project&#8217;s <code>pyproject.toml</code> file, but <em>will</em> be respected during dependency resolution.</p>
+
+<p>This is equivalent to pip&#8217;s <code>--constraint</code> option.</p>
+
+<p>May also be set with the <code>UV_CONSTRAINT</code> environment variable.</p>
 </dd><dt id="uv-add--default-index"><a href="#uv-add--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
 <p>Accepts either a repository compliant with PEP 503 (the simple repository API), or a local directory laid out in the same format.</p>
@@ -949,6 +955,13 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-add--managed-python"><a href="#uv-add--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
+</dd><dt id="uv-add--marker"><a href="#uv-add--marker"><code>--marker</code></a>, <code>-m</code> <i>marker</i></dt><dd><p>Apply this marker to all added packages</p>
+
 </dd><dt id="uv-add--native-tls"><a href="#uv-add--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -968,6 +981,7 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-add--no-build-isolation"><a href="#uv-add--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -979,7 +993,8 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 </dd><dt id="uv-add--no-build-package"><a href="#uv-add--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-add--no-cache"><a href="#uv-add--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-add--no-cache"><a href="#uv-add--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-add--no-config"><a href="#uv-add--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -989,6 +1004,11 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-add--no-index"><a href="#uv-add--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-add--no-managed-python"><a href="#uv-add--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-add--no-progress"><a href="#uv-add--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -1042,28 +1062,15 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-add--python"><a href="#uv-add--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for resolving and syncing.</p>
 
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-add--python-preference"><a href="#uv-add--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-add--quiet"><a href="#uv-add--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-add--quiet"><a href="#uv-add--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-add--raw-sources"><a href="#uv-add--raw-sources"><code>--raw-sources</code></a></dt><dd><p>Add source requirements to <code>project.dependencies</code>, rather than <code>tool.uv.sources</code>.</p>
 
@@ -1073,11 +1080,11 @@ uv add [OPTIONS] <PACKAGES|--requirements <REQUIREMENTS>>
 
 </dd><dt id="uv-add--refresh-package"><a href="#uv-add--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-add--reinstall"><a href="#uv-add--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-add--reinstall"><a href="#uv-add--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-add--reinstall-package"><a href="#uv-add--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
-</dd><dt id="uv-add--requirements"><a href="#uv-add--requirements"><code>--requirements</code></a>, <code>-r</code> <i>requirements</i></dt><dd><p>Add all packages listed in the given <code>requirements.txt</code> files</p>
+</dd><dt id="uv-add--requirements"><a href="#uv-add--requirements"><code>--requirements</code></a>, <code>--requirement</code>, <code>-r</code> <i>requirements</i></dt><dd><p>Add all packages listed in the given <code>requirements.txt</code> files</p>
 
 </dd><dt id="uv-add--resolution"><a href="#uv-add--resolution"><code>--resolution</code></a> <i>resolution</i></dt><dd><p>The strategy to use when selecting between the different compatible versions for a given package requirement.</p>
 
@@ -1147,7 +1154,7 @@ uv remove [OPTIONS] <PACKAGES>...
 
 <p>If the project virtual environment is active or no virtual environment is active, this has no effect.</p>
 
-</dd><dt id="uv-remove--allow-insecure-host"><a href="#uv-remove--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-remove--allow-insecure-host"><a href="#uv-remove--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -1176,7 +1183,7 @@ uv remove [OPTIONS] <PACKAGES>...
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-remove--compile-bytecode"><a href="#uv-remove--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-remove--compile-bytecode"><a href="#uv-remove--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -1188,7 +1195,7 @@ uv remove [OPTIONS] <PACKAGES>...
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-remove--config-setting"><a href="#uv-remove--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-remove--config-setting"><a href="#uv-remove--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-remove--default-index"><a href="#uv-remove--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -1312,6 +1319,11 @@ uv remove [OPTIONS] <PACKAGES>...
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-remove--managed-python"><a href="#uv-remove--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-remove--native-tls"><a href="#uv-remove--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -1331,6 +1343,7 @@ uv remove [OPTIONS] <PACKAGES>...
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-remove--no-build-isolation"><a href="#uv-remove--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -1342,7 +1355,8 @@ uv remove [OPTIONS] <PACKAGES>...
 
 </dd><dt id="uv-remove--no-build-package"><a href="#uv-remove--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-remove--no-cache"><a href="#uv-remove--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-remove--no-cache"><a href="#uv-remove--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-remove--no-config"><a href="#uv-remove--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -1352,6 +1366,11 @@ uv remove [OPTIONS] <PACKAGES>...
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-remove--no-index"><a href="#uv-remove--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-remove--no-managed-python"><a href="#uv-remove--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-remove--no-progress"><a href="#uv-remove--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -1401,34 +1420,21 @@ uv remove [OPTIONS] <PACKAGES>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-remove--python"><a href="#uv-remove--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for resolving and syncing.</p>
 
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-remove--python-preference"><a href="#uv-remove--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-remove--quiet"><a href="#uv-remove--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-remove--quiet"><a href="#uv-remove--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-remove--refresh"><a href="#uv-remove--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-remove--refresh-package"><a href="#uv-remove--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-remove--reinstall"><a href="#uv-remove--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-remove--reinstall"><a href="#uv-remove--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-remove--reinstall-package"><a href="#uv-remove--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -1506,7 +1512,7 @@ uv sync [OPTIONS]
 
 <p>Any extras or groups specified via <code>--extra</code>, <code>--group</code>, or related options will be applied to all workspace members.</p>
 
-</dd><dt id="uv-sync--allow-insecure-host"><a href="#uv-sync--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-sync--allow-insecure-host"><a href="#uv-sync--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -1522,6 +1528,10 @@ uv sync [OPTIONS]
 <p>To view the location of the cache directory, run <code>uv cache dir</code>.</p>
 
 <p>May also be set with the <code>UV_CACHE_DIR</code> environment variable.</p>
+</dd><dt id="uv-sync--check"><a href="#uv-sync--check"><code>--check</code></a></dt><dd><p>Check if the Python environment is synchronized with the project.</p>
+
+<p>If the environment is not up to date, uv will exit with an error.</p>
+
 </dd><dt id="uv-sync--color"><a href="#uv-sync--color"><code>--color</code></a> <i>color-choice</i></dt><dd><p>Control the use of color in output.</p>
 
 <p>By default, uv will automatically detect support for colors when writing to a terminal.</p>
@@ -1535,7 +1545,7 @@ uv sync [OPTIONS]
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-sync--compile-bytecode"><a href="#uv-sync--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-sync--compile-bytecode"><a href="#uv-sync--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -1547,7 +1557,7 @@ uv sync [OPTIONS]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-sync--config-setting"><a href="#uv-sync--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-sync--config-setting"><a href="#uv-sync--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-sync--default-index"><a href="#uv-sync--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -1648,7 +1658,7 @@ uv sync [OPTIONS]
 <p>The index given by this flag is given lower priority than all other indexes specified via the <code>--extra-index-url</code> flag.</p>
 
 <p>May also be set with the <code>UV_INDEX_URL</code> environment variable.</p>
-</dd><dt id="uv-sync--inexact"><a href="#uv-sync--inexact"><code>--inexact</code></a></dt><dd><p>Do not remove extraneous packages present in the environment.</p>
+</dd><dt id="uv-sync--inexact"><a href="#uv-sync--inexact"><code>--inexact</code></a>, <code>--no-exact</code></dt><dd><p>Do not remove extraneous packages present in the environment.</p>
 
 <p>When enabled, uv will make the minimum necessary changes to satisfy the requirements. By default, syncing will remove any extraneous packages from the environment</p>
 
@@ -1687,6 +1697,11 @@ uv sync [OPTIONS]
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-sync--managed-python"><a href="#uv-sync--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-sync--native-tls"><a href="#uv-sync--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -1706,6 +1721,7 @@ uv sync [OPTIONS]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-sync--no-build-isolation"><a href="#uv-sync--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -1717,7 +1733,8 @@ uv sync [OPTIONS]
 
 </dd><dt id="uv-sync--no-build-package"><a href="#uv-sync--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-sync--no-cache"><a href="#uv-sync--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-sync--no-cache"><a href="#uv-sync--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-sync--no-config"><a href="#uv-sync--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -1725,7 +1742,7 @@ uv sync [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
-</dd><dt id="uv-sync--no-default-groups"><a href="#uv-sync--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the the default dependency groups.</p>
+</dd><dt id="uv-sync--no-default-groups"><a href="#uv-sync--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the default dependency groups.</p>
 
 <p>uv includes the groups defined in <code>tool.uv.default-groups</code> by default. This disables that option, however, specific groups can still be included with <code>--group</code>.</p>
 
@@ -1735,13 +1752,14 @@ uv sync [OPTIONS]
 
 </dd><dt id="uv-sync--no-editable"><a href="#uv-sync--no-editable"><code>--no-editable</code></a></dt><dd><p>Install any editable dependencies, including the project and any workspace members, as non-editable</p>
 
+<p>May also be set with the <code>UV_NO_EDITABLE</code> environment variable.</p>
 </dd><dt id="uv-sync--no-extra"><a href="#uv-sync--no-extra"><code>--no-extra</code></a> <i>no-extra</i></dt><dd><p>Exclude the specified optional dependencies, if <code>--all-extras</code> is supplied.</p>
 
 <p>May be provided multiple times.</p>
 
 </dd><dt id="uv-sync--no-group"><a href="#uv-sync--no-group"><code>--no-group</code></a> <i>no-group</i></dt><dd><p>Disable the specified dependency group.</p>
 
-<p>This options always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
+<p>This option always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
 
 <p>May be provided multiple times.</p>
 
@@ -1759,6 +1777,11 @@ uv sync [OPTIONS]
 
 <p>By default, all of the workspace members and their dependencies are installed into the environment. The <code>--no-install-workspace</code> option allows exclusion of all the workspace members while retaining their dependencies. This is particularly useful in situations like building Docker images where installing the workspace separately from its dependencies allows optimal layer caching.</p>
 
+</dd><dt id="uv-sync--no-managed-python"><a href="#uv-sync--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-sync--no-progress"><a href="#uv-sync--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -1819,6 +1842,7 @@ uv sync [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-sync--python"><a href="#uv-sync--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for the project environment.</p>
 
 <p>By default, the first interpreter that meets the project&#8217;s <code>requires-python</code> constraint is used.</p>
@@ -1828,29 +1852,15 @@ uv sync [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-sync--python-preference"><a href="#uv-sync--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-sync--quiet"><a href="#uv-sync--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-sync--quiet"><a href="#uv-sync--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-sync--refresh"><a href="#uv-sync--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-sync--refresh-package"><a href="#uv-sync--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-sync--reinstall"><a href="#uv-sync--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-sync--reinstall"><a href="#uv-sync--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-sync--reinstall-package"><a href="#uv-sync--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -1900,7 +1910,7 @@ uv lock [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-lock--allow-insecure-host"><a href="#uv-lock--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-lock--allow-insecure-host"><a href="#uv-lock--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -1916,14 +1926,14 @@ uv lock [OPTIONS]
 <p>To view the location of the cache directory, run <code>uv cache dir</code>.</p>
 
 <p>May also be set with the <code>UV_CACHE_DIR</code> environment variable.</p>
-</dd><dt id="uv-lock--check"><a href="#uv-lock--check"><code>--check</code></a></dt><dd><p>Check if the lockfile is up-to-date.</p>
+</dd><dt id="uv-lock--check"><a href="#uv-lock--check"><code>--check</code></a>, <code>--locked</code></dt><dd><p>Check if the lockfile is up-to-date.</p>
 
 <p>Asserts that the <code>uv.lock</code> would remain unchanged after a resolution. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>Equivalent to <code>--locked</code>.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
-</dd><dt id="uv-lock--check-exists"><a href="#uv-lock--check-exists"><code>--check-exists</code></a></dt><dd><p>Assert that a <code>uv.lock</code> exists without checking if it is up-to-date.</p>
+</dd><dt id="uv-lock--check-exists"><a href="#uv-lock--check-exists"><code>--check-exists</code></a>, <code>--frozen</code></dt><dd><p>Assert that a <code>uv.lock</code> exists without checking if it is up-to-date.</p>
 
 <p>Equivalent to <code>--frozen</code>.</p>
 
@@ -1946,7 +1956,7 @@ uv lock [OPTIONS]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-lock--config-setting"><a href="#uv-lock--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-lock--config-setting"><a href="#uv-lock--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-lock--default-index"><a href="#uv-lock--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -2060,6 +2070,11 @@ uv lock [OPTIONS]
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-lock--managed-python"><a href="#uv-lock--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-lock--native-tls"><a href="#uv-lock--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -2079,6 +2094,7 @@ uv lock [OPTIONS]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-lock--no-build-isolation"><a href="#uv-lock--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -2090,7 +2106,8 @@ uv lock [OPTIONS]
 
 </dd><dt id="uv-lock--no-build-package"><a href="#uv-lock--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-lock--no-cache"><a href="#uv-lock--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-lock--no-cache"><a href="#uv-lock--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-lock--no-config"><a href="#uv-lock--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -2100,6 +2117,11 @@ uv lock [OPTIONS]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-lock--no-index"><a href="#uv-lock--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-lock--no-managed-python"><a href="#uv-lock--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-lock--no-progress"><a href="#uv-lock--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -2142,6 +2164,7 @@ uv lock [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-lock--python"><a href="#uv-lock--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use during resolution.</p>
 
 <p>A Python interpreter is required for building source distributions to determine package metadata when there are not wheels.</p>
@@ -2151,23 +2174,9 @@ uv lock [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-lock--python-preference"><a href="#uv-lock--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-lock--quiet"><a href="#uv-lock--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-lock--quiet"><a href="#uv-lock--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-lock--refresh"><a href="#uv-lock--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
@@ -2207,7 +2216,7 @@ uv lock [OPTIONS]
 
 Export the project's lockfile to an alternate format.
 
-At present, only `requirements-txt` is supported.
+At present, both `requirements.txt` and `pylock.toml` (PEP 751) formats are supported.
 
 The project is re-locked before exporting unless the `--locked` or `--frozen` flag is provided.
 
@@ -2235,7 +2244,7 @@ uv export [OPTIONS]
 
 <p>Any extras or groups specified via <code>--extra</code>, <code>--group</code>, or related options will be applied to all workspace members.</p>
 
-</dd><dt id="uv-export--allow-insecure-host"><a href="#uv-export--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-export--allow-insecure-host"><a href="#uv-export--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -2269,7 +2278,7 @@ uv export [OPTIONS]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-export--config-setting"><a href="#uv-export--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-export--config-setting"><a href="#uv-export--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-export--default-index"><a href="#uv-export--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -2323,13 +2332,16 @@ uv export [OPTIONS]
 </ul>
 </dd><dt id="uv-export--format"><a href="#uv-export--format"><code>--format</code></a> <i>format</i></dt><dd><p>The format to which <code>uv.lock</code> should be exported.</p>
 
-<p>At present, only <code>requirements-txt</code> is supported.</p>
+<p>Supports both <code>requirements.txt</code> and <code>pylock.toml</code> (PEP 751) output formats.</p>
 
-<p>[default: requirements-txt]</p>
+<p>uv will infer the output format from the file extension of the output file, if provided. Otherwise, defaults to <code>requirements.txt</code>.</p>
+
 <p>Possible values:</p>
 
 <ul>
-<li><code>requirements-txt</code>:  Export in <code>requirements.txt</code> format</li>
+<li><code>requirements.txt</code>:  Export in <code>requirements.txt</code> format</li>
+
+<li><code>pylock.toml</code>:  Export in <code>pylock.toml</code> format</li>
 </ul>
 </dd><dt id="uv-export--frozen"><a href="#uv-export--frozen"><code>--frozen</code></a></dt><dd><p>Do not update the <code>uv.lock</code> before exporting.</p>
 
@@ -2407,6 +2419,11 @@ uv export [OPTIONS]
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-export--managed-python"><a href="#uv-export--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-export--native-tls"><a href="#uv-export--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -2414,6 +2431,8 @@ uv export [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
+</dd><dt id="uv-export--no-annotate"><a href="#uv-export--no-annotate"><code>--no-annotate</code></a></dt><dd><p>Exclude comment annotations indicating the source of each package</p>
+
 </dd><dt id="uv-export--no-binary"><a href="#uv-export--no-binary"><code>--no-binary</code></a></dt><dd><p>Don&#8217;t install pre-built wheels.</p>
 
 <p>The given packages will be built and installed from source. The resolver will still use pre-built wheels to extract package metadata, if available.</p>
@@ -2426,6 +2445,7 @@ uv export [OPTIONS]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-export--no-build-isolation"><a href="#uv-export--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -2437,7 +2457,8 @@ uv export [OPTIONS]
 
 </dd><dt id="uv-export--no-build-package"><a href="#uv-export--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-export--no-cache"><a href="#uv-export--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-export--no-cache"><a href="#uv-export--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-export--no-config"><a href="#uv-export--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -2445,7 +2466,7 @@ uv export [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
-</dd><dt id="uv-export--no-default-groups"><a href="#uv-export--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the the default dependency groups.</p>
+</dd><dt id="uv-export--no-default-groups"><a href="#uv-export--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the default dependency groups.</p>
 
 <p>uv includes the groups defined in <code>tool.uv.default-groups</code> by default. This disables that option, however, specific groups can still be included with <code>--group</code>.</p>
 
@@ -2455,15 +2476,15 @@ uv export [OPTIONS]
 
 </dd><dt id="uv-export--no-editable"><a href="#uv-export--no-editable"><code>--no-editable</code></a></dt><dd><p>Install any editable dependencies, including the project and any workspace members, as non-editable</p>
 
-</dd><dt id="uv-export--no-emit-package"><a href="#uv-export--no-emit-package"><code>--no-emit-package</code></a> <i>no-emit-package</i></dt><dd><p>Do not emit the given package(s).</p>
+</dd><dt id="uv-export--no-emit-package"><a href="#uv-export--no-emit-package"><code>--no-emit-package</code></a>, <code>--no-install-package</code> <i>no-emit-package</i></dt><dd><p>Do not emit the given package(s).</p>
 
 <p>By default, all of the project&#8217;s dependencies are included in the exported requirements file. The <code>--no-install-package</code> option allows exclusion of specific packages.</p>
 
-</dd><dt id="uv-export--no-emit-project"><a href="#uv-export--no-emit-project"><code>--no-emit-project</code></a></dt><dd><p>Do not emit the current project.</p>
+</dd><dt id="uv-export--no-emit-project"><a href="#uv-export--no-emit-project"><code>--no-emit-project</code></a>, <code>--no-install-project</code></dt><dd><p>Do not emit the current project.</p>
 
 <p>By default, the current project is included in the exported requirements file with all of its dependencies. The <code>--no-emit-project</code> option allows the project to be excluded, but all of its dependencies to remain included.</p>
 
-</dd><dt id="uv-export--no-emit-workspace"><a href="#uv-export--no-emit-workspace"><code>--no-emit-workspace</code></a></dt><dd><p>Do not emit any workspace members, including the root project.</p>
+</dd><dt id="uv-export--no-emit-workspace"><a href="#uv-export--no-emit-workspace"><code>--no-emit-workspace</code></a>, <code>--no-install-workspace</code></dt><dd><p>Do not emit any workspace members, including the root project.</p>
 
 <p>By default, all workspace members and their dependencies are included in the exported requirements file, with all of their dependencies. The <code>--no-emit-workspace</code> option allows exclusion of all the workspace members while retaining their dependencies.</p>
 
@@ -2473,7 +2494,7 @@ uv export [OPTIONS]
 
 </dd><dt id="uv-export--no-group"><a href="#uv-export--no-group"><code>--no-group</code></a> <i>no-group</i></dt><dd><p>Disable the specified dependency group.</p>
 
-<p>This options always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
+<p>This option always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
 
 <p>May be provided multiple times.</p>
 
@@ -2483,6 +2504,11 @@ uv export [OPTIONS]
 
 </dd><dt id="uv-export--no-index"><a href="#uv-export--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-export--no-managed-python"><a href="#uv-export--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-export--no-progress"><a href="#uv-export--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -2543,7 +2569,8 @@ uv export [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-export--prune"><a href="#uv-export--prune"><code>--prune</code></a> <i>prune</i></dt><dd><p>Prune the given package from the dependency tree.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-export--prune"><a href="#uv-export--prune"><code>--prune</code></a> <i>package</i></dt><dd><p>Prune the given package from the dependency tree.</p>
 
 <p>Pruned packages will be excluded from the exported requirements file, as will any dependencies that are no longer required after the pruned package is removed.</p>
 
@@ -2556,23 +2583,9 @@ uv export [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-export--python-preference"><a href="#uv-export--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-export--quiet"><a href="#uv-export--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-export--quiet"><a href="#uv-export--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-export--refresh"><a href="#uv-export--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
@@ -2624,7 +2637,7 @@ uv tree [OPTIONS]
 
 <p><code>--no-group</code> can be used to exclude specific groups.</p>
 
-</dd><dt id="uv-tree--allow-insecure-host"><a href="#uv-tree--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-tree--allow-insecure-host"><a href="#uv-tree--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -2658,7 +2671,7 @@ uv tree [OPTIONS]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-tree--config-setting"><a href="#uv-tree--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-tree--config-setting"><a href="#uv-tree--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-tree--default-index"><a href="#uv-tree--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -2748,7 +2761,7 @@ uv tree [OPTIONS]
 <p>The index given by this flag is given lower priority than all other indexes specified via the <code>--extra-index-url</code> flag.</p>
 
 <p>May also be set with the <code>UV_INDEX_URL</code> environment variable.</p>
-</dd><dt id="uv-tree--invert"><a href="#uv-tree--invert"><code>--invert</code></a></dt><dd><p>Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package</p>
+</dd><dt id="uv-tree--invert"><a href="#uv-tree--invert"><code>--invert</code></a>, <code>--reverse</code></dt><dd><p>Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package</p>
 
 </dd><dt id="uv-tree--keyring-provider"><a href="#uv-tree--keyring-provider"><code>--keyring-provider</code></a> <i>keyring-provider</i></dt><dd><p>Attempt to use <code>keyring</code> for authentication for index URLs.</p>
 
@@ -2787,6 +2800,11 @@ uv tree [OPTIONS]
 <p>Requires that the lockfile is up-to-date. If the lockfile is missing or needs to be updated, uv will exit with an error.</p>
 
 <p>May also be set with the <code>UV_LOCKED</code> environment variable.</p>
+</dd><dt id="uv-tree--managed-python"><a href="#uv-tree--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tree--native-tls"><a href="#uv-tree--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -2806,6 +2824,7 @@ uv tree [OPTIONS]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-tree--no-build-isolation"><a href="#uv-tree--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -2817,7 +2836,8 @@ uv tree [OPTIONS]
 
 </dd><dt id="uv-tree--no-build-package"><a href="#uv-tree--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-tree--no-cache"><a href="#uv-tree--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-tree--no-cache"><a href="#uv-tree--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tree--no-config"><a href="#uv-tree--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -2827,7 +2847,7 @@ uv tree [OPTIONS]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-tree--no-dedupe"><a href="#uv-tree--no-dedupe"><code>--no-dedupe</code></a></dt><dd><p>Do not de-duplicate repeated dependencies. Usually, when a package has already displayed its dependencies, further occurrences will not re-display its dependencies, and will include a (*) to indicate it has already been shown. This flag will cause those duplicates to be repeated</p>
 
-</dd><dt id="uv-tree--no-default-groups"><a href="#uv-tree--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the the default dependency groups.</p>
+</dd><dt id="uv-tree--no-default-groups"><a href="#uv-tree--no-default-groups"><code>--no-default-groups</code></a></dt><dd><p>Ignore the default dependency groups.</p>
 
 <p>uv includes the groups defined in <code>tool.uv.default-groups</code> by default. This disables that option, however, specific groups can still be included with <code>--group</code>.</p>
 
@@ -2837,12 +2857,17 @@ uv tree [OPTIONS]
 
 </dd><dt id="uv-tree--no-group"><a href="#uv-tree--no-group"><code>--no-group</code></a> <i>no-group</i></dt><dd><p>Disable the specified dependency group.</p>
 
-<p>This options always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
+<p>This option always takes precedence over default groups, <code>--all-groups</code>, and <code>--group</code>.</p>
 
 <p>May be provided multiple times.</p>
 
 </dd><dt id="uv-tree--no-index"><a href="#uv-tree--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-tree--no-managed-python"><a href="#uv-tree--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tree--no-progress"><a href="#uv-tree--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -2901,6 +2926,7 @@ uv tree [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-tree--prune"><a href="#uv-tree--prune"><code>--prune</code></a> <i>prune</i></dt><dd><p>Prune the given package from the display of the dependency tree</p>
 
 </dd><dt id="uv-tree--python"><a href="#uv-tree--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for locking and filtering.</p>
@@ -2993,29 +3019,15 @@ uv tree [OPTIONS]
 
 <li><code>aarch64-manylinux_2_40</code>:  An ARM64 target for the <code>manylinux_2_40</code> platform</li>
 </ul>
-</dd><dt id="uv-tree--python-preference"><a href="#uv-tree--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
-
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
 </dd><dt id="uv-tree--python-version"><a href="#uv-tree--python-version"><code>--python-version</code></a> <i>python-version</i></dt><dd><p>The Python version to use when filtering the tree.</p>
 
 <p>For example, pass <code>--python-version 3.10</code> to display the dependencies that would be included when installing on Python 3.10.</p>
 
 <p>Defaults to the version of the discovered Python interpreter.</p>
 
-</dd><dt id="uv-tree--quiet"><a href="#uv-tree--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+</dd><dt id="uv-tree--quiet"><a href="#uv-tree--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
+
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tree--resolution"><a href="#uv-tree--resolution"><code>--resolution</code></a> <i>resolution</i></dt><dd><p>The strategy to use when selecting between the different compatible versions for a given package requirement.</p>
 
@@ -3107,7 +3119,7 @@ uv tool run [OPTIONS] [COMMAND]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-tool-run--allow-insecure-host"><a href="#uv-tool-run--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-tool-run--allow-insecure-host"><a href="#uv-tool-run--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -3116,6 +3128,11 @@ uv tool run [OPTIONS] [COMMAND]
 <p>WARNING: Hosts included in this list will not be verified against the system&#8217;s certificate store. Only use <code>--allow-insecure-host</code> in a secure network with verified sources, as it bypasses SSL verification and could expose you to MITM attacks.</p>
 
 <p>May also be set with the <code>UV_INSECURE_HOST</code> environment variable.</p>
+</dd><dt id="uv-tool-run--build-constraints"><a href="#uv-tool-run--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
+
+<p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
+
+<p>May also be set with the <code>UV_BUILD_CONSTRAINT</code> environment variable.</p>
 </dd><dt id="uv-tool-run--cache-dir"><a href="#uv-tool-run--cache-dir"><code>--cache-dir</code></a> <i>cache-dir</i></dt><dd><p>Path to the cache directory.</p>
 
 <p>Defaults to <code>$XDG_CACHE_HOME/uv</code> or <code>$HOME/.cache/uv</code> on macOS and Linux, and <code>%LOCALAPPDATA%\uv\cache</code> on Windows.</p>
@@ -3136,7 +3153,7 @@ uv tool run [OPTIONS] [COMMAND]
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-tool-run--compile-bytecode"><a href="#uv-tool-run--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-tool-run--compile-bytecode"><a href="#uv-tool-run--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -3148,8 +3165,15 @@ uv tool run [OPTIONS] [COMMAND]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-tool-run--config-setting"><a href="#uv-tool-run--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-tool-run--config-setting"><a href="#uv-tool-run--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
+</dd><dt id="uv-tool-run--constraints"><a href="#uv-tool-run--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+
+<p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
+
+<p>This is equivalent to pip&#8217;s <code>--constraint</code> option.</p>
+
+<p>May also be set with the <code>UV_CONSTRAINT</code> environment variable.</p>
 </dd><dt id="uv-tool-run--default-index"><a href="#uv-tool-run--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
 <p>Accepts either a repository compliant with PEP 503 (the simple repository API), or a local directory laid out in the same format.</p>
@@ -3163,6 +3187,11 @@ uv tool run [OPTIONS] [COMMAND]
 
 <p>See <code>--project</code> to only change the project root directory.</p>
 
+</dd><dt id="uv-tool-run--env-file"><a href="#uv-tool-run--env-file"><code>--env-file</code></a> <i>env-file</i></dt><dd><p>Load environment variables from a <code>.env</code> file.</p>
+
+<p>Can be provided multiple times, with subsequent files overriding values defined in previous files.</p>
+
+<p>May also be set with the <code>UV_ENV_FILE</code> environment variable.</p>
 </dd><dt id="uv-tool-run--exclude-newer"><a href="#uv-tool-run--exclude-newer"><code>--exclude-newer</code></a> <i>exclude-newer</i></dt><dd><p>Limit candidate packages to those that were uploaded prior to the given date.</p>
 
 <p>Accepts both RFC 3339 timestamps (e.g., <code>2006-12-02T02:07:43Z</code>) and local dates in the same format (e.g., <code>2006-12-02</code>) in your system&#8217;s configured time zone.</p>
@@ -3262,6 +3291,11 @@ uv tool run [OPTIONS] [COMMAND]
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-tool-run--managed-python"><a href="#uv-tool-run--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-run--native-tls"><a href="#uv-tool-run--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -3281,6 +3315,7 @@ uv tool run [OPTIONS] [COMMAND]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-tool-run--no-build-isolation"><a href="#uv-tool-run--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -3292,7 +3327,8 @@ uv tool run [OPTIONS] [COMMAND]
 
 </dd><dt id="uv-tool-run--no-build-package"><a href="#uv-tool-run--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-tool-run--no-cache"><a href="#uv-tool-run--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-tool-run--no-cache"><a href="#uv-tool-run--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-run--no-config"><a href="#uv-tool-run--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -3300,8 +3336,16 @@ uv tool run [OPTIONS] [COMMAND]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-tool-run--no-env-file"><a href="#uv-tool-run--no-env-file"><code>--no-env-file</code></a></dt><dd><p>Avoid reading environment variables from a <code>.env</code> file</p>
+
+<p>May also be set with the <code>UV_NO_ENV_FILE</code> environment variable.</p>
 </dd><dt id="uv-tool-run--no-index"><a href="#uv-tool-run--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-tool-run--no-managed-python"><a href="#uv-tool-run--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-run--no-progress"><a href="#uv-tool-run--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -3316,6 +3360,13 @@ uv tool run [OPTIONS] [COMMAND]
 <p>When disabled, uv will only use locally cached data and locally available files.</p>
 
 <p>May also be set with the <code>UV_OFFLINE</code> environment variable.</p>
+</dd><dt id="uv-tool-run--overrides"><a href="#uv-tool-run--overrides"><code>--overrides</code></a>, <code>--override</code> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
+
+<p>Overrides files are <code>requirements.txt</code>-like files that force a specific version of a requirement to be installed, regardless of the requirements declared by any constituent package, and regardless of whether this would be considered an invalid resolution.</p>
+
+<p>While constraints are <em>additive</em>, in that they&#8217;re combined with the requirements of the constituent packages, overrides are <em>absolute</em>, in that they completely replace the requirements of the constituent packages.</p>
+
+<p>May also be set with the <code>UV_OVERRIDE</code> environment variable.</p>
 </dd><dt id="uv-tool-run--prerelease"><a href="#uv-tool-run--prerelease"><code>--prerelease</code></a> <i>prerelease</i></dt><dd><p>The strategy to use when considering pre-release versions.</p>
 
 <p>By default, uv will accept pre-releases for packages that <em>only</em> publish pre-releases, along with first-party requirements that contain an explicit pre-release marker in the declared specifiers (<code>if-necessary-or-explicit</code>).</p>
@@ -3344,34 +3395,21 @@ uv tool run [OPTIONS] [COMMAND]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-tool-run--python"><a href="#uv-tool-run--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use to build the run environment.</p>
 
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-tool-run--python-preference"><a href="#uv-tool-run--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-tool-run--quiet"><a href="#uv-tool-run--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-run--quiet"><a href="#uv-tool-run--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-run--refresh"><a href="#uv-tool-run--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-tool-run--refresh-package"><a href="#uv-tool-run--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-tool-run--reinstall"><a href="#uv-tool-run--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-tool-run--reinstall"><a href="#uv-tool-run--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-tool-run--reinstall-package"><a href="#uv-tool-run--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -3431,7 +3469,7 @@ uv tool install [OPTIONS] <PACKAGE>
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-tool-install--allow-insecure-host"><a href="#uv-tool-install--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-tool-install--allow-insecure-host"><a href="#uv-tool-install--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -3440,6 +3478,11 @@ uv tool install [OPTIONS] <PACKAGE>
 <p>WARNING: Hosts included in this list will not be verified against the system&#8217;s certificate store. Only use <code>--allow-insecure-host</code> in a secure network with verified sources, as it bypasses SSL verification and could expose you to MITM attacks.</p>
 
 <p>May also be set with the <code>UV_INSECURE_HOST</code> environment variable.</p>
+</dd><dt id="uv-tool-install--build-constraints"><a href="#uv-tool-install--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
+
+<p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
+
+<p>May also be set with the <code>UV_BUILD_CONSTRAINT</code> environment variable.</p>
 </dd><dt id="uv-tool-install--cache-dir"><a href="#uv-tool-install--cache-dir"><code>--cache-dir</code></a> <i>cache-dir</i></dt><dd><p>Path to the cache directory.</p>
 
 <p>Defaults to <code>$XDG_CACHE_HOME/uv</code> or <code>$HOME/.cache/uv</code> on macOS and Linux, and <code>%LOCALAPPDATA%\uv\cache</code> on Windows.</p>
@@ -3460,7 +3503,7 @@ uv tool install [OPTIONS] <PACKAGE>
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-tool-install--compile-bytecode"><a href="#uv-tool-install--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-tool-install--compile-bytecode"><a href="#uv-tool-install--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -3472,9 +3515,9 @@ uv tool install [OPTIONS] <PACKAGE>
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-tool-install--config-setting"><a href="#uv-tool-install--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-tool-install--config-setting"><a href="#uv-tool-install--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
-</dd><dt id="uv-tool-install--constraints"><a href="#uv-tool-install--constraints"><code>--constraints</code></a>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+</dd><dt id="uv-tool-install--constraints"><a href="#uv-tool-install--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -3593,6 +3636,11 @@ uv tool install [OPTIONS] <PACKAGE>
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-tool-install--managed-python"><a href="#uv-tool-install--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-install--native-tls"><a href="#uv-tool-install--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -3612,6 +3660,7 @@ uv tool install [OPTIONS] <PACKAGE>
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-tool-install--no-build-isolation"><a href="#uv-tool-install--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -3623,7 +3672,8 @@ uv tool install [OPTIONS] <PACKAGE>
 
 </dd><dt id="uv-tool-install--no-build-package"><a href="#uv-tool-install--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-tool-install--no-cache"><a href="#uv-tool-install--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-tool-install--no-cache"><a href="#uv-tool-install--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-install--no-config"><a href="#uv-tool-install--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -3633,6 +3683,11 @@ uv tool install [OPTIONS] <PACKAGE>
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-tool-install--no-index"><a href="#uv-tool-install--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-tool-install--no-managed-python"><a href="#uv-tool-install--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-install--no-progress"><a href="#uv-tool-install--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -3647,7 +3702,7 @@ uv tool install [OPTIONS] <PACKAGE>
 <p>When disabled, uv will only use locally cached data and locally available files.</p>
 
 <p>May also be set with the <code>UV_OFFLINE</code> environment variable.</p>
-</dd><dt id="uv-tool-install--overrides"><a href="#uv-tool-install--overrides"><code>--overrides</code></a> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
+</dd><dt id="uv-tool-install--overrides"><a href="#uv-tool-install--overrides"><code>--overrides</code></a>, <code>--override</code> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
 
 <p>Overrides files are <code>requirements.txt</code>-like files that force a specific version of a requirement to be installed, regardless of the requirements declared by any constituent package, and regardless of whether this would be considered an invalid resolution.</p>
 
@@ -3682,34 +3737,21 @@ uv tool install [OPTIONS] <PACKAGE>
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-tool-install--python"><a href="#uv-tool-install--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use to build the tool environment.</p>
 
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-tool-install--python-preference"><a href="#uv-tool-install--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-tool-install--quiet"><a href="#uv-tool-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-install--quiet"><a href="#uv-tool-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-install--refresh"><a href="#uv-tool-install--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-tool-install--refresh-package"><a href="#uv-tool-install--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-tool-install--reinstall"><a href="#uv-tool-install--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-tool-install--reinstall"><a href="#uv-tool-install--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-tool-install--reinstall-package"><a href="#uv-tool-install--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -3769,7 +3811,7 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 <dl class="cli-reference"><dt id="uv-tool-upgrade--all"><a href="#uv-tool-upgrade--all"><code>--all</code></a></dt><dd><p>Upgrade all tools</p>
 
-</dd><dt id="uv-tool-upgrade--allow-insecure-host"><a href="#uv-tool-upgrade--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-tool-upgrade--allow-insecure-host"><a href="#uv-tool-upgrade--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -3798,7 +3840,7 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-tool-upgrade--compile-bytecode"><a href="#uv-tool-upgrade--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-tool-upgrade--compile-bytecode"><a href="#uv-tool-upgrade--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -3810,7 +3852,7 @@ uv tool upgrade [OPTIONS] <NAME>...
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-tool-upgrade--config-setting"><a href="#uv-tool-upgrade--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-tool-upgrade--config-setting"><a href="#uv-tool-upgrade--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-tool-upgrade--default-index"><a href="#uv-tool-upgrade--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -3918,6 +3960,11 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-tool-upgrade--managed-python"><a href="#uv-tool-upgrade--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--native-tls"><a href="#uv-tool-upgrade--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -3937,6 +3984,7 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--no-build-isolation"><a href="#uv-tool-upgrade--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -3948,7 +3996,8 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 </dd><dt id="uv-tool-upgrade--no-build-package"><a href="#uv-tool-upgrade--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-tool-upgrade--no-cache"><a href="#uv-tool-upgrade--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-tool-upgrade--no-cache"><a href="#uv-tool-upgrade--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--no-config"><a href="#uv-tool-upgrade--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -3958,6 +4007,11 @@ uv tool upgrade [OPTIONS] <NAME>...
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--no-index"><a href="#uv-tool-upgrade--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-tool-upgrade--no-managed-python"><a href="#uv-tool-upgrade--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--no-progress"><a href="#uv-tool-upgrade--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4000,30 +4054,17 @@ uv tool upgrade [OPTIONS] <NAME>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-tool-upgrade--python"><a href="#uv-tool-upgrade--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>Upgrade a tool, and specify it to use the given Python interpreter to build its environment. Use with <code>--all</code> to apply to all tools.</p>
 
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-tool-upgrade--python-preference"><a href="#uv-tool-upgrade--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-tool-upgrade--quiet"><a href="#uv-tool-upgrade--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-upgrade--quiet"><a href="#uv-tool-upgrade--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
-
-</dd><dt id="uv-tool-upgrade--reinstall"><a href="#uv-tool-upgrade--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-tool-upgrade--reinstall"><a href="#uv-tool-upgrade--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-tool-upgrade--reinstall-package"><a href="#uv-tool-upgrade--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -4061,7 +4102,7 @@ uv tool list [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-tool-list--allow-insecure-host"><a href="#uv-tool-list--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-tool-list--allow-insecure-host"><a href="#uv-tool-list--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4103,6 +4144,11 @@ uv tool list [OPTIONS]
 
 </dd><dt id="uv-tool-list--help"><a href="#uv-tool-list--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-tool-list--managed-python"><a href="#uv-tool-list--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-list--native-tls"><a href="#uv-tool-list--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -4110,7 +4156,7 @@ uv tool list [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-tool-list--no-cache"><a href="#uv-tool-list--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-tool-list--no-cache"><a href="#uv-tool-list--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-list--no-config"><a href="#uv-tool-list--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4118,6 +4164,11 @@ uv tool list [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-tool-list--no-managed-python"><a href="#uv-tool-list--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-list--no-progress"><a href="#uv-tool-list--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4138,7 +4189,10 @@ uv tool list [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-tool-list--quiet"><a href="#uv-tool-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-tool-list--quiet"><a href="#uv-tool-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
+
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-list--show-paths"><a href="#uv-tool-list--show-paths"><code>--show-paths</code></a></dt><dd><p>Whether to display the path to each tool environment and installed executable</p>
 
@@ -4172,7 +4226,7 @@ uv tool uninstall [OPTIONS] <NAME>...
 
 <dl class="cli-reference"><dt id="uv-tool-uninstall--all"><a href="#uv-tool-uninstall--all"><code>--all</code></a></dt><dd><p>Uninstall all tools</p>
 
-</dd><dt id="uv-tool-uninstall--allow-insecure-host"><a href="#uv-tool-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-tool-uninstall--allow-insecure-host"><a href="#uv-tool-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4214,6 +4268,11 @@ uv tool uninstall [OPTIONS] <NAME>...
 
 </dd><dt id="uv-tool-uninstall--help"><a href="#uv-tool-uninstall--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-tool-uninstall--managed-python"><a href="#uv-tool-uninstall--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-uninstall--native-tls"><a href="#uv-tool-uninstall--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -4221,7 +4280,7 @@ uv tool uninstall [OPTIONS] <NAME>...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-tool-uninstall--no-cache"><a href="#uv-tool-uninstall--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-tool-uninstall--no-cache"><a href="#uv-tool-uninstall--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-uninstall--no-config"><a href="#uv-tool-uninstall--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4229,6 +4288,11 @@ uv tool uninstall [OPTIONS] <NAME>...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-tool-uninstall--no-managed-python"><a href="#uv-tool-uninstall--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-uninstall--no-progress"><a href="#uv-tool-uninstall--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4251,23 +4315,10 @@ uv tool uninstall [OPTIONS] <NAME>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-tool-uninstall--python-preference"><a href="#uv-tool-uninstall--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-tool-uninstall--quiet"><a href="#uv-tool-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-uninstall--quiet"><a href="#uv-tool-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-uninstall--verbose"><a href="#uv-tool-uninstall--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -4295,7 +4346,7 @@ uv tool update-shell [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-tool-update-shell--allow-insecure-host"><a href="#uv-tool-update-shell--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-tool-update-shell--allow-insecure-host"><a href="#uv-tool-update-shell--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4337,6 +4388,11 @@ uv tool update-shell [OPTIONS]
 
 </dd><dt id="uv-tool-update-shell--help"><a href="#uv-tool-update-shell--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-tool-update-shell--managed-python"><a href="#uv-tool-update-shell--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-update-shell--native-tls"><a href="#uv-tool-update-shell--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -4344,7 +4400,7 @@ uv tool update-shell [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-tool-update-shell--no-cache"><a href="#uv-tool-update-shell--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-tool-update-shell--no-cache"><a href="#uv-tool-update-shell--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-update-shell--no-config"><a href="#uv-tool-update-shell--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4352,6 +4408,11 @@ uv tool update-shell [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-tool-update-shell--no-managed-python"><a href="#uv-tool-update-shell--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-update-shell--no-progress"><a href="#uv-tool-update-shell--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4374,23 +4435,10 @@ uv tool update-shell [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-tool-update-shell--python-preference"><a href="#uv-tool-update-shell--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-tool-update-shell--quiet"><a href="#uv-tool-update-shell--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-update-shell--quiet"><a href="#uv-tool-update-shell--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-update-shell--verbose"><a href="#uv-tool-update-shell--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -4420,7 +4468,7 @@ uv tool dir [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-tool-dir--allow-insecure-host"><a href="#uv-tool-dir--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-tool-dir--allow-insecure-host"><a href="#uv-tool-dir--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4478,6 +4526,11 @@ uv tool dir [OPTIONS]
 
 </dd><dt id="uv-tool-dir--help"><a href="#uv-tool-dir--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-tool-dir--managed-python"><a href="#uv-tool-dir--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-dir--native-tls"><a href="#uv-tool-dir--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -4485,7 +4538,7 @@ uv tool dir [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-tool-dir--no-cache"><a href="#uv-tool-dir--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-tool-dir--no-cache"><a href="#uv-tool-dir--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-tool-dir--no-config"><a href="#uv-tool-dir--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4493,6 +4546,11 @@ uv tool dir [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-tool-dir--no-managed-python"><a href="#uv-tool-dir--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-tool-dir--no-progress"><a href="#uv-tool-dir--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4515,23 +4573,10 @@ uv tool dir [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-tool-dir--python-preference"><a href="#uv-tool-dir--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-tool-dir--quiet"><a href="#uv-tool-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-tool-dir--quiet"><a href="#uv-tool-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-tool-dir--verbose"><a href="#uv-tool-dir--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -4611,7 +4656,9 @@ List the available Python installations.
 
 By default, installed Python versions and the downloads for latest available patch version of each supported Python major version are shown.
 
-The displayed versions are filtered by the `--python-preference` option, i.e., if using `only-system`, no managed Python versions will be shown.
+Use `--managed-python` to view only managed Python versions.
+
+Use `--no-managed-python` to omit managed Python versions.
 
 Use `--all-versions` to view all available patch versions.
 
@@ -4620,12 +4667,20 @@ Use `--only-installed` to omit available downloads.
 <h3 class="cli-reference">Usage</h3>
 
 ```
-uv python list [OPTIONS]
+uv python list [OPTIONS] [REQUEST]
 ```
+
+<h3 class="cli-reference">Arguments</h3>
+
+<dl class="cli-reference"><dt id="uv-python-list--request"><a href="#uv-python-list--request"<code>REQUEST</code></a></dt><dd><p>A Python request to filter by.</p>
+
+<p>See <a href="#uv-python">uv python</a> to view supported request formats.</p>
+
+</dd></dl>
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-python-list--all-arches"><a href="#uv-python-list--all-arches"><code>--all-arches</code></a></dt><dd><p>List Python downloads for all architectures.</p>
+<dl class="cli-reference"><dt id="uv-python-list--all-arches"><a href="#uv-python-list--all-arches"><code>--all-arches</code></a>, <code>--all_architectures</code></dt><dd><p>List Python downloads for all architectures.</p>
 
 <p>By default, only downloads for the current architecture are shown.</p>
 
@@ -4637,7 +4692,7 @@ uv python list [OPTIONS]
 
 <p>By default, only the latest patch version is shown for each minor version.</p>
 
-</dd><dt id="uv-python-list--allow-insecure-host"><a href="#uv-python-list--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-python-list--allow-insecure-host"><a href="#uv-python-list--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4679,6 +4734,11 @@ uv python list [OPTIONS]
 
 </dd><dt id="uv-python-list--help"><a href="#uv-python-list--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-python-list--managed-python"><a href="#uv-python-list--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-list--native-tls"><a href="#uv-python-list--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -4686,7 +4746,7 @@ uv python list [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-list--no-cache"><a href="#uv-python-list--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-list--no-cache"><a href="#uv-python-list--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-list--no-config"><a href="#uv-python-list--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4694,6 +4754,11 @@ uv python list [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-list--no-managed-python"><a href="#uv-python-list--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-list--no-progress"><a href="#uv-python-list--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4706,13 +4771,13 @@ uv python list [OPTIONS]
 <p>When disabled, uv will only use locally cached data and locally available files.</p>
 
 <p>May also be set with the <code>UV_OFFLINE</code> environment variable.</p>
-</dd><dt id="uv-python-list--only-downloads"><a href="#uv-python-list--only-downloads"><code>--only-downloads</code></a></dt><dd><p>Only show Python downloads, exclude installed distributions.</p>
+</dd><dt id="uv-python-list--only-downloads"><a href="#uv-python-list--only-downloads"><code>--only-downloads</code></a></dt><dd><p>Only show available Python downloads.</p>
 
-<p>By default, available downloads for the current platform are shown.</p>
+<p>By default, installed distributions and available downloads for the current platform are shown.</p>
 
-</dd><dt id="uv-python-list--only-installed"><a href="#uv-python-list--only-installed"><code>--only-installed</code></a></dt><dd><p>Only show installed Python versions, exclude available downloads.</p>
+</dd><dt id="uv-python-list--only-installed"><a href="#uv-python-list--only-installed"><code>--only-installed</code></a></dt><dd><p>Only show installed Python versions.</p>
 
-<p>By default, available downloads for the current platform are shown.</p>
+<p>By default, installed distributions and available downloads for the current platform are shown.</p>
 
 </dd><dt id="uv-python-list--output-format"><a href="#uv-python-list--output-format"><code>--output-format</code></a> <i>output-format</i></dt><dd><p>Select the output format</p>
 
@@ -4734,23 +4799,10 @@ uv python list [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-python-list--python-preference"><a href="#uv-python-list--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-python-list--quiet"><a href="#uv-python-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-list--quiet"><a href="#uv-python-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-python-list--show-urls"><a href="#uv-python-list--show-urls"><code>--show-urls</code></a></dt><dd><p>Show the URLs of available Python downloads.</p>
 
@@ -4796,7 +4848,7 @@ uv python install [OPTIONS] [TARGETS]...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-python-install--allow-insecure-host"><a href="#uv-python-install--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-python-install--allow-insecure-host"><a href="#uv-python-install--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -4859,6 +4911,11 @@ uv python install [OPTIONS] [TARGETS]...
 <p>See <code>uv python dir</code> to view the current Python installation directory. Defaults to <code>~/.local/share/uv/python</code>.</p>
 
 <p>May also be set with the <code>UV_PYTHON_INSTALL_DIR</code> environment variable.</p>
+</dd><dt id="uv-python-install--managed-python"><a href="#uv-python-install--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-install--mirror"><a href="#uv-python-install--mirror"><code>--mirror</code></a> <i>mirror</i></dt><dd><p>Set the URL to use as the source for downloading Python installations.</p>
 
 <p>The provided URL will replace <code>https://github.com/astral-sh/python-build-standalone/releases/download</code> in, e.g., <code>https://github.com/astral-sh/python-build-standalone/releases/download/20240713/cpython-3.12.4%2B20240713-aarch64-apple-darwin-install_only.tar.gz</code>.</p>
@@ -4873,7 +4930,7 @@ uv python install [OPTIONS] [TARGETS]...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-install--no-cache"><a href="#uv-python-install--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-install--no-cache"><a href="#uv-python-install--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-install--no-config"><a href="#uv-python-install--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -4881,6 +4938,11 @@ uv python install [OPTIONS] [TARGETS]...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-install--no-managed-python"><a href="#uv-python-install--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-install--no-progress"><a href="#uv-python-install--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -4903,6 +4965,7 @@ uv python install [OPTIONS] [TARGETS]...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-python-install--pypy-mirror"><a href="#uv-python-install--pypy-mirror"><code>--pypy-mirror</code></a> <i>pypy-mirror</i></dt><dd><p>Set the URL to use as the source for downloading PyPy installations.</p>
 
 <p>The provided URL will replace <code>https://downloads.python.org/pypy</code> in, e.g., <code>https://downloads.python.org/pypy/pypy3.8-v7.3.7-osx64.tar.bz2</code>.</p>
@@ -4910,23 +4973,9 @@ uv python install [OPTIONS] [TARGETS]...
 <p>Distributions can be read from a local directory by using the <code>file://</code> URL scheme.</p>
 
 <p>May also be set with the <code>UV_PYPY_INSTALL_MIRROR</code> environment variable.</p>
-</dd><dt id="uv-python-install--python-preference"><a href="#uv-python-install--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-python-install--quiet"><a href="#uv-python-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-install--quiet"><a href="#uv-python-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-python-install--reinstall"><a href="#uv-python-install--reinstall"><code>--reinstall</code></a>, <code>-r</code></dt><dd><p>Reinstall the requested Python version, if it&#8217;s already installed.</p>
 
@@ -4964,7 +5013,7 @@ uv python find [OPTIONS] [REQUEST]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-python-find--allow-insecure-host"><a href="#uv-python-find--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-python-find--allow-insecure-host"><a href="#uv-python-find--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -5006,6 +5055,11 @@ uv python find [OPTIONS] [REQUEST]
 
 </dd><dt id="uv-python-find--help"><a href="#uv-python-find--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-python-find--managed-python"><a href="#uv-python-find--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-find--native-tls"><a href="#uv-python-find--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -5013,7 +5067,7 @@ uv python find [OPTIONS] [REQUEST]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-find--no-cache"><a href="#uv-python-find--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-find--no-cache"><a href="#uv-python-find--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-find--no-config"><a href="#uv-python-find--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -5021,12 +5075,17 @@ uv python find [OPTIONS] [REQUEST]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-find--no-managed-python"><a href="#uv-python-find--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-find--no-progress"><a href="#uv-python-find--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
 
 <p>May also be set with the <code>UV_NO_PROGRESS</code> environment variable.</p>
-</dd><dt id="uv-python-find--no-project"><a href="#uv-python-find--no-project"><code>--no-project</code></a></dt><dd><p>Avoid discovering a project or workspace.</p>
+</dd><dt id="uv-python-find--no-project"><a href="#uv-python-find--no-project"><code>--no-project</code></a>, <code>--no_workspace</code></dt><dd><p>Avoid discovering a project or workspace.</p>
 
 <p>Otherwise, when no request is provided, the Python requirement of a project in the current directory or parent directories will be used.</p>
 
@@ -5047,23 +5106,14 @@ uv python find [OPTIONS] [REQUEST]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-python-find--python-preference"><a href="#uv-python-find--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-python-find--quiet"><a href="#uv-python-find--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
+</dd><dt id="uv-python-find--script"><a href="#uv-python-find--script"><code>--script</code></a> <i>script</i></dt><dd><p>Find the environment for a Python script, rather than the current project</p>
 
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-find--quiet"><a href="#uv-python-find--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+</dd><dt id="uv-python-find--show-version"><a href="#uv-python-find--show-version"><code>--show-version</code></a></dt><dd><p>Show the Python version that would be used instead of the path to the interpreter</p>
 
 </dd><dt id="uv-python-find--system"><a href="#uv-python-find--system"><code>--system</code></a></dt><dd><p>Only find system Python interpreters.</p>
 
@@ -5110,7 +5160,7 @@ uv python pin [OPTIONS] [REQUEST]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-python-pin--allow-insecure-host"><a href="#uv-python-pin--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-python-pin--allow-insecure-host"><a href="#uv-python-pin--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -5150,8 +5200,21 @@ uv python pin [OPTIONS] [REQUEST]
 
 <p>See <code>--project</code> to only change the project root directory.</p>
 
+</dd><dt id="uv-python-pin--global"><a href="#uv-python-pin--global"><code>--global</code></a></dt><dd><p>Update the global Python version pin.</p>
+
+<p>Writes the pinned Python version to a <code>.python-version</code> file in the uv user configuration directory: <code>XDG_CONFIG_HOME/uv</code> on Linux/macOS and <code>%APPDATA%/uv</code> on Windows.</p>
+
+<p>When a local Python version pin is not found in the working directory or an ancestor directory, this version will be used instead.</p>
+
+<p>Unlike local version pins, this version is used as the default for commands that mutate global state, like <code>uv tool install</code>.</p>
+
 </dd><dt id="uv-python-pin--help"><a href="#uv-python-pin--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-python-pin--managed-python"><a href="#uv-python-pin--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-pin--native-tls"><a href="#uv-python-pin--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -5159,7 +5222,7 @@ uv python pin [OPTIONS] [REQUEST]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-pin--no-cache"><a href="#uv-python-pin--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-pin--no-cache"><a href="#uv-python-pin--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-pin--no-config"><a href="#uv-python-pin--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -5167,12 +5230,17 @@ uv python pin [OPTIONS] [REQUEST]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-pin--no-managed-python"><a href="#uv-python-pin--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-pin--no-progress"><a href="#uv-python-pin--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
 
 <p>May also be set with the <code>UV_NO_PROGRESS</code> environment variable.</p>
-</dd><dt id="uv-python-pin--no-project"><a href="#uv-python-pin--no-project"><code>--no-project</code></a></dt><dd><p>Avoid validating the Python pin is compatible with the project or workspace.</p>
+</dd><dt id="uv-python-pin--no-project"><a href="#uv-python-pin--no-project"><code>--no-project</code></a>, <code>--no-workspace</code></dt><dd><p>Avoid validating the Python pin is compatible with the project or workspace.</p>
 
 <p>By default, a project or workspace is discovered in the current directory or any parent directory. If a workspace is found, the Python pin is validated against the workspace&#8217;s <code>requires-python</code> constraint.</p>
 
@@ -5193,23 +5261,10 @@ uv python pin [OPTIONS] [REQUEST]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-python-pin--python-preference"><a href="#uv-python-pin--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-python-pin--quiet"><a href="#uv-python-pin--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-pin--quiet"><a href="#uv-python-pin--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-python-pin--resolved"><a href="#uv-python-pin--resolved"><code>--resolved</code></a></dt><dd><p>Write the resolved Python interpreter path instead of the request.</p>
 
@@ -5243,7 +5298,7 @@ uv python dir [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-python-dir--allow-insecure-host"><a href="#uv-python-dir--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-python-dir--allow-insecure-host"><a href="#uv-python-dir--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -5301,6 +5356,11 @@ uv python dir [OPTIONS]
 
 </dd><dt id="uv-python-dir--help"><a href="#uv-python-dir--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-python-dir--managed-python"><a href="#uv-python-dir--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-dir--native-tls"><a href="#uv-python-dir--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -5308,7 +5368,7 @@ uv python dir [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-dir--no-cache"><a href="#uv-python-dir--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-dir--no-cache"><a href="#uv-python-dir--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-dir--no-config"><a href="#uv-python-dir--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -5316,6 +5376,11 @@ uv python dir [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-dir--no-managed-python"><a href="#uv-python-dir--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-dir--no-progress"><a href="#uv-python-dir--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -5338,23 +5403,10 @@ uv python dir [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-python-dir--python-preference"><a href="#uv-python-dir--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-python-dir--quiet"><a href="#uv-python-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-dir--quiet"><a href="#uv-python-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-python-dir--verbose"><a href="#uv-python-dir--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -5386,7 +5438,7 @@ uv python uninstall [OPTIONS] <TARGETS>...
 
 <dl class="cli-reference"><dt id="uv-python-uninstall--all"><a href="#uv-python-uninstall--all"><code>--all</code></a></dt><dd><p>Uninstall all managed Python versions</p>
 
-</dd><dt id="uv-python-uninstall--allow-insecure-host"><a href="#uv-python-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-python-uninstall--allow-insecure-host"><a href="#uv-python-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -5431,6 +5483,11 @@ uv python uninstall [OPTIONS] <TARGETS>...
 </dd><dt id="uv-python-uninstall--install-dir"><a href="#uv-python-uninstall--install-dir"><code>--install-dir</code></a>, <code>-i</code> <i>install-dir</i></dt><dd><p>The directory where the Python was installed</p>
 
 <p>May also be set with the <code>UV_PYTHON_INSTALL_DIR</code> environment variable.</p>
+</dd><dt id="uv-python-uninstall--managed-python"><a href="#uv-python-uninstall--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-uninstall--native-tls"><a href="#uv-python-uninstall--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -5438,7 +5495,7 @@ uv python uninstall [OPTIONS] <TARGETS>...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-python-uninstall--no-cache"><a href="#uv-python-uninstall--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-python-uninstall--no-cache"><a href="#uv-python-uninstall--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-python-uninstall--no-config"><a href="#uv-python-uninstall--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -5446,6 +5503,11 @@ uv python uninstall [OPTIONS] <TARGETS>...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-python-uninstall--no-managed-python"><a href="#uv-python-uninstall--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-python-uninstall--no-progress"><a href="#uv-python-uninstall--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -5468,23 +5530,10 @@ uv python uninstall [OPTIONS] <TARGETS>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-python-uninstall--python-preference"><a href="#uv-python-uninstall--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-python-uninstall--quiet"><a href="#uv-python-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-python-uninstall--quiet"><a href="#uv-python-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-python-uninstall--verbose"><a href="#uv-python-uninstall--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -5506,9 +5555,9 @@ uv pip [OPTIONS] <COMMAND>
 
 <h3 class="cli-reference">Commands</h3>
 
-<dl class="cli-reference"><dt><a href="#uv-pip-compile"><code>uv pip compile</code></a></dt><dd><p>Compile a <code>requirements.in</code> file to a <code>requirements.txt</code> file</p>
+<dl class="cli-reference"><dt><a href="#uv-pip-compile"><code>uv pip compile</code></a></dt><dd><p>Compile a <code>requirements.in</code> file to a <code>requirements.txt</code> or <code>pylock.toml</code> file</p>
 </dd>
-<dt><a href="#uv-pip-sync"><code>uv pip sync</code></a></dt><dd><p>Sync an environment with a <code>requirements.txt</code> file</p>
+<dt><a href="#uv-pip-sync"><code>uv pip sync</code></a></dt><dd><p>Sync an environment with a <code>requirements.txt</code> or <code>pylock.toml</code> file</p>
 </dd>
 <dt><a href="#uv-pip-install"><code>uv pip install</code></a></dt><dd><p>Install packages into an environment</p>
 </dd>
@@ -5528,12 +5577,12 @@ uv pip [OPTIONS] <COMMAND>
 
 ### uv pip compile
 
-Compile a `requirements.in` file to a `requirements.txt` file
+Compile a `requirements.in` file to a `requirements.txt` or `pylock.toml` file
 
 <h3 class="cli-reference">Usage</h3>
 
 ```
-uv pip compile [OPTIONS] <SRC_FILE>...
+uv pip compile [OPTIONS] <SRC_FILE|--group <GROUP>>
 ```
 
 <h3 class="cli-reference">Arguments</h3>
@@ -5554,7 +5603,7 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <p>Only applies to <code>pyproject.toml</code>, <code>setup.py</code>, and <code>setup.cfg</code> sources.</p>
 
-</dd><dt id="uv-pip-compile--allow-insecure-host"><a href="#uv-pip-compile--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-pip-compile--allow-insecure-host"><a href="#uv-pip-compile--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -5574,7 +5623,7 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <li><code>split</code>:  Render each annotation on its own line</li>
 </ul>
-</dd><dt id="uv-pip-compile--build-constraints"><a href="#uv-pip-compile--build-constraints"><code>--build-constraints</code></a>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
+</dd><dt id="uv-pip-compile--build-constraints"><a href="#uv-pip-compile--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -5604,9 +5653,9 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-pip-compile--config-setting"><a href="#uv-pip-compile--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-pip-compile--config-setting"><a href="#uv-pip-compile--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
-</dd><dt id="uv-pip-compile--constraints"><a href="#uv-pip-compile--constraints"><code>--constraints</code></a>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+</dd><dt id="uv-pip-compile--constraints"><a href="#uv-pip-compile--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -5676,7 +5725,26 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <li><code>requires-python</code>:  Optimize for selecting latest supported version of each package, for each supported Python version</li>
 </ul>
+</dd><dt id="uv-pip-compile--format"><a href="#uv-pip-compile--format"><code>--format</code></a> <i>format</i></dt><dd><p>The format in which the resolution should be output.</p>
+
+<p>Supports both <code>requirements.txt</code> and <code>pylock.toml</code> (PEP 751) output formats.</p>
+
+<p>uv will infer the output format from the file extension of the output file, if provided. Otherwise, defaults to <code>requirements.txt</code>.</p>
+
+<p>Possible values:</p>
+
+<ul>
+<li><code>requirements.txt</code>:  Export in <code>requirements.txt</code> format</li>
+
+<li><code>pylock.toml</code>:  Export in <code>pylock.toml</code> format</li>
+</ul>
 </dd><dt id="uv-pip-compile--generate-hashes"><a href="#uv-pip-compile--generate-hashes"><code>--generate-hashes</code></a></dt><dd><p>Include distribution hashes in the output file</p>
+
+</dd><dt id="uv-pip-compile--group"><a href="#uv-pip-compile--group"><code>--group</code></a> <i>group</i></dt><dd><p>Install the specified dependency group from a <code>pyproject.toml</code>.</p>
+
+<p>If no path is provided, the <code>pyproject.toml</code> in the working directory is used.</p>
+
+<p>May be provided multiple times.</p>
 
 </dd><dt id="uv-pip-compile--help"><a href="#uv-pip-compile--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
@@ -5740,6 +5808,11 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-pip-compile--managed-python"><a href="#uv-pip-compile--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-compile--native-tls"><a href="#uv-pip-compile--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -5770,17 +5843,22 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <p>Assumes that the packages&#8217; build dependencies specified by PEP 518 are already installed.</p>
 
-</dd><dt id="uv-pip-compile--no-cache"><a href="#uv-pip-compile--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-compile--no-cache"><a href="#uv-pip-compile--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-compile--no-deps"><a href="#uv-pip-compile--no-deps"><code>--no-deps</code></a></dt><dd><p>Ignore package dependencies, instead only add those packages explicitly listed on the command line to the resulting requirements file</p>
 
-</dd><dt id="uv-pip-compile--no-emit-package"><a href="#uv-pip-compile--no-emit-package"><code>--no-emit-package</code></a> <i>no-emit-package</i></dt><dd><p>Specify a package to omit from the output resolution. Its dependencies will still be included in the resolution. Equivalent to pip-compile&#8217;s <code>--unsafe-package</code> option</p>
+</dd><dt id="uv-pip-compile--no-emit-package"><a href="#uv-pip-compile--no-emit-package"><code>--no-emit-package</code></a>, <code>--unsafe-package</code> <i>no-emit-package</i></dt><dd><p>Specify a package to omit from the output resolution. Its dependencies will still be included in the resolution. Equivalent to pip-compile&#8217;s <code>--unsafe-package</code> option</p>
 
 </dd><dt id="uv-pip-compile--no-header"><a href="#uv-pip-compile--no-header"><code>--no-header</code></a></dt><dd><p>Exclude the comment header at the top of the generated output file</p>
 
 </dd><dt id="uv-pip-compile--no-index"><a href="#uv-pip-compile--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-pip-compile--no-managed-python"><a href="#uv-pip-compile--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-compile--no-progress"><a href="#uv-pip-compile--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -5809,11 +5887,11 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <p>Multiple packages may be provided. Disable binaries for all packages with <code>:all:</code>. Clear previously specified packages with <code>:none:</code>.</p>
 
-</dd><dt id="uv-pip-compile--output-file"><a href="#uv-pip-compile--output-file"><code>--output-file</code></a>, <code>-o</code> <i>output-file</i></dt><dd><p>Write the compiled requirements to the given <code>requirements.txt</code> file.</p>
+</dd><dt id="uv-pip-compile--output-file"><a href="#uv-pip-compile--output-file"><code>--output-file</code></a>, <code>-o</code> <i>output-file</i></dt><dd><p>Write the compiled requirements to the given <code>requirements.txt</code> or <code>pylock.toml</code> file.</p>
 
 <p>If the file already exists, the existing versions will be preferred when resolving dependencies, unless <code>--upgrade</code> is also specified.</p>
 
-</dd><dt id="uv-pip-compile--overrides"><a href="#uv-pip-compile--overrides"><code>--overrides</code></a> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
+</dd><dt id="uv-pip-compile--overrides"><a href="#uv-pip-compile--overrides"><code>--overrides</code></a>, <code>--override</code> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
 
 <p>Overrides files are <code>requirements.txt</code>-like files that force a specific version of a requirement to be installed, regardless of the requirements declared by any constituent package, and regardless of whether this would be considered an invalid resolution.</p>
 
@@ -5848,6 +5926,7 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-compile--python"><a href="#uv-pip-compile--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use during resolution.</p>
 
 <p>A Python interpreter is required for building source distributions to determine package metadata when there are not wheels.</p>
@@ -5941,22 +6020,6 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <li><code>aarch64-manylinux_2_40</code>:  An ARM64 target for the <code>manylinux_2_40</code> platform</li>
 </ul>
-</dd><dt id="uv-pip-compile--python-preference"><a href="#uv-pip-compile--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
-
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
 </dd><dt id="uv-pip-compile--python-version"><a href="#uv-pip-compile--python-version"><code>--python-version</code></a> <i>python-version</i></dt><dd><p>The Python version to use for resolution.</p>
 
 <p>For example, <code>3.8</code> or <code>3.8.17</code>.</p>
@@ -5967,7 +6030,9 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 <p>If a patch version is omitted, the minimum patch version is assumed. For example, <code>3.8</code> is mapped to <code>3.8.0</code>.</p>
 
-</dd><dt id="uv-pip-compile--quiet"><a href="#uv-pip-compile--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+</dd><dt id="uv-pip-compile--quiet"><a href="#uv-pip-compile--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
+
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-compile--refresh"><a href="#uv-pip-compile--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
@@ -5992,6 +6057,72 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 <p>By default, uv uses the virtual environment in the current working directory or any parent directory, falling back to searching for a Python executable in <code>PATH</code>. The <code>--system</code> option instructs uv to avoid using a virtual environment Python and restrict its search to the system path.</p>
 
 <p>May also be set with the <code>UV_SYSTEM_PYTHON</code> environment variable.</p>
+</dd><dt id="uv-pip-compile--torch-backend"><a href="#uv-pip-compile--torch-backend"><code>--torch-backend</code></a> <i>torch-backend</i></dt><dd><p>The backend to use when fetching packages in the PyTorch ecosystem (e.g., <code>cpu</code>, <code>cu126</code>, or <code>auto</code>).</p>
+
+<p>When set, uv will ignore the configured index URLs for packages in the PyTorch ecosystem, and will instead use the defined backend.</p>
+
+<p>For example, when set to <code>cpu</code>, uv will use the CPU-only PyTorch index; when set to <code>cu126</code>, uv will use the PyTorch index for CUDA 12.6.</p>
+
+<p>The <code>auto</code> mode will attempt to detect the appropriate PyTorch index based on the currently installed CUDA drivers.</p>
+
+<p>This option is in preview and may change in any future release.</p>
+
+<p>May also be set with the <code>UV_TORCH_BACKEND</code> environment variable.</p>
+<p>Possible values:</p>
+
+<ul>
+<li><code>auto</code>:  Select the appropriate PyTorch index based on the operating system and CUDA driver version</li>
+
+<li><code>cpu</code>:  Use the CPU-only PyTorch index</li>
+
+<li><code>cu128</code>:  Use the PyTorch index for CUDA 12.8</li>
+
+<li><code>cu126</code>:  Use the PyTorch index for CUDA 12.6</li>
+
+<li><code>cu125</code>:  Use the PyTorch index for CUDA 12.5</li>
+
+<li><code>cu124</code>:  Use the PyTorch index for CUDA 12.4</li>
+
+<li><code>cu123</code>:  Use the PyTorch index for CUDA 12.3</li>
+
+<li><code>cu122</code>:  Use the PyTorch index for CUDA 12.2</li>
+
+<li><code>cu121</code>:  Use the PyTorch index for CUDA 12.1</li>
+
+<li><code>cu120</code>:  Use the PyTorch index for CUDA 12.0</li>
+
+<li><code>cu118</code>:  Use the PyTorch index for CUDA 11.8</li>
+
+<li><code>cu117</code>:  Use the PyTorch index for CUDA 11.7</li>
+
+<li><code>cu116</code>:  Use the PyTorch index for CUDA 11.6</li>
+
+<li><code>cu115</code>:  Use the PyTorch index for CUDA 11.5</li>
+
+<li><code>cu114</code>:  Use the PyTorch index for CUDA 11.4</li>
+
+<li><code>cu113</code>:  Use the PyTorch index for CUDA 11.3</li>
+
+<li><code>cu112</code>:  Use the PyTorch index for CUDA 11.2</li>
+
+<li><code>cu111</code>:  Use the PyTorch index for CUDA 11.1</li>
+
+<li><code>cu110</code>:  Use the PyTorch index for CUDA 11.0</li>
+
+<li><code>cu102</code>:  Use the PyTorch index for CUDA 10.2</li>
+
+<li><code>cu101</code>:  Use the PyTorch index for CUDA 10.1</li>
+
+<li><code>cu100</code>:  Use the PyTorch index for CUDA 10.0</li>
+
+<li><code>cu92</code>:  Use the PyTorch index for CUDA 9.2</li>
+
+<li><code>cu91</code>:  Use the PyTorch index for CUDA 9.1</li>
+
+<li><code>cu90</code>:  Use the PyTorch index for CUDA 9.0</li>
+
+<li><code>cu80</code>:  Use the PyTorch index for CUDA 8.0</li>
+</ul>
 </dd><dt id="uv-pip-compile--universal"><a href="#uv-pip-compile--universal"><code>--universal</code></a></dt><dd><p>Perform a universal resolution, attempting to generate a single <code>requirements.txt</code> output file that is compatible with all operating systems, architectures, and Python implementations.</p>
 
 <p>In universal mode, the current Python version (or user-provided <code>--python-version</code>) will be treated as a lower bound. For example, <code>--universal --python-version 3.7</code> would produce a universal resolution for Python 3.7 and later.</p>
@@ -6012,7 +6143,11 @@ uv pip compile [OPTIONS] <SRC_FILE>...
 
 ### uv pip sync
 
-Sync an environment with a `requirements.txt` file
+Sync an environment with a `requirements.txt` or `pylock.toml` file.
+
+When syncing an environment, any packages not listed in the `requirements.txt` or `pylock.toml` file will be removed. To retain extraneous packages, use `uv pip install` instead.
+
+The input file is presumed to be the output of a `pip compile` or `uv export` operation, in which it will include all transitive dependencies. If transitive dependencies are not present in the file, they will not be installed. Use `--strict` to warn if any transitive dependencies are missing.
 
 <h3 class="cli-reference">Usage</h3>
 
@@ -6034,7 +6169,7 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 
 <dl class="cli-reference"><dt id="uv-pip-sync--allow-empty-requirements"><a href="#uv-pip-sync--allow-empty-requirements"><code>--allow-empty-requirements</code></a></dt><dd><p>Allow sync of empty requirements, which will clear the environment of all packages</p>
 
-</dd><dt id="uv-pip-sync--allow-insecure-host"><a href="#uv-pip-sync--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-pip-sync--allow-insecure-host"><a href="#uv-pip-sync--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -6048,7 +6183,7 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 <p>WARNING: <code>--break-system-packages</code> is intended for use in continuous integration (CI) environments, when installing into Python installations that are managed by an external package manager, like <code>apt</code>. It should be used with caution, as such Python installations explicitly recommend against modifications by other package managers (like uv or <code>pip</code>).</p>
 
 <p>May also be set with the <code>UV_BREAK_SYSTEM_PACKAGES</code> environment variable.</p>
-</dd><dt id="uv-pip-sync--build-constraints"><a href="#uv-pip-sync--build-constraints"><code>--build-constraints</code></a>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
+</dd><dt id="uv-pip-sync--build-constraints"><a href="#uv-pip-sync--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -6073,7 +6208,7 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-pip-sync--compile-bytecode"><a href="#uv-pip-sync--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-pip-sync--compile-bytecode"><a href="#uv-pip-sync--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -6085,9 +6220,9 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-pip-sync--config-setting"><a href="#uv-pip-sync--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-pip-sync--config-setting"><a href="#uv-pip-sync--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
-</dd><dt id="uv-pip-sync--constraints"><a href="#uv-pip-sync--constraints"><code>--constraints</code></a>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+</dd><dt id="uv-pip-sync--constraints"><a href="#uv-pip-sync--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -6188,6 +6323,11 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-pip-sync--managed-python"><a href="#uv-pip-sync--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-sync--native-tls"><a href="#uv-pip-sync--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -6212,11 +6352,16 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
 
 <p>May also be set with the <code>UV_NO_BUILD_ISOLATION</code> environment variable.</p>
-</dd><dt id="uv-pip-sync--no-cache"><a href="#uv-pip-sync--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-sync--no-cache"><a href="#uv-pip-sync--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-sync--no-index"><a href="#uv-pip-sync--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-pip-sync--no-managed-python"><a href="#uv-pip-sync--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-sync--no-progress"><a href="#uv-pip-sync--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -6256,6 +6401,7 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-sync--python"><a href="#uv-pip-sync--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter into which packages should be installed.</p>
 
 <p>By default, syncing requires a virtual environment. A path to an alternative Python can be provided, but it is only recommended in continuous integration (CI) environments and should be used with caution, as it can modify the system Python installation.</p>
@@ -6348,33 +6494,19 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 
 <li><code>aarch64-manylinux_2_40</code>:  An ARM64 target for the <code>manylinux_2_40</code> platform</li>
 </ul>
-</dd><dt id="uv-pip-sync--python-preference"><a href="#uv-pip-sync--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
-
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
 </dd><dt id="uv-pip-sync--python-version"><a href="#uv-pip-sync--python-version"><code>--python-version</code></a> <i>python-version</i></dt><dd><p>The minimum Python version that should be supported by the requirements (e.g., <code>3.7</code> or <code>3.7.9</code>).</p>
 
 <p>If a patch version is omitted, the minimum patch version is assumed. For example, <code>3.7</code> is mapped to <code>3.7.0</code>.</p>
 
-</dd><dt id="uv-pip-sync--quiet"><a href="#uv-pip-sync--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+</dd><dt id="uv-pip-sync--quiet"><a href="#uv-pip-sync--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
+
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-sync--refresh"><a href="#uv-pip-sync--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-pip-sync--refresh-package"><a href="#uv-pip-sync--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-pip-sync--reinstall"><a href="#uv-pip-sync--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-pip-sync--reinstall"><a href="#uv-pip-sync--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-pip-sync--reinstall-package"><a href="#uv-pip-sync--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -6402,6 +6534,72 @@ uv pip sync [OPTIONS] <SRC_FILE>...
 <p>May also be set with the <code>UV_SYSTEM_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-sync--target"><a href="#uv-pip-sync--target"><code>--target</code></a> <i>target</i></dt><dd><p>Install packages into the specified directory, rather than into the virtual or system Python environment. The packages will be installed at the top-level of the directory</p>
 
+</dd><dt id="uv-pip-sync--torch-backend"><a href="#uv-pip-sync--torch-backend"><code>--torch-backend</code></a> <i>torch-backend</i></dt><dd><p>The backend to use when fetching packages in the PyTorch ecosystem (e.g., <code>cpu</code>, <code>cu126</code>, or <code>auto</code>).</p>
+
+<p>When set, uv will ignore the configured index URLs for packages in the PyTorch ecosystem, and will instead use the defined backend.</p>
+
+<p>For example, when set to <code>cpu</code>, uv will use the CPU-only PyTorch index; when set to <code>cu126</code>, uv will use the PyTorch index for CUDA 12.6.</p>
+
+<p>The <code>auto</code> mode will attempt to detect the appropriate PyTorch index based on the currently installed CUDA drivers.</p>
+
+<p>This option is in preview and may change in any future release.</p>
+
+<p>May also be set with the <code>UV_TORCH_BACKEND</code> environment variable.</p>
+<p>Possible values:</p>
+
+<ul>
+<li><code>auto</code>:  Select the appropriate PyTorch index based on the operating system and CUDA driver version</li>
+
+<li><code>cpu</code>:  Use the CPU-only PyTorch index</li>
+
+<li><code>cu128</code>:  Use the PyTorch index for CUDA 12.8</li>
+
+<li><code>cu126</code>:  Use the PyTorch index for CUDA 12.6</li>
+
+<li><code>cu125</code>:  Use the PyTorch index for CUDA 12.5</li>
+
+<li><code>cu124</code>:  Use the PyTorch index for CUDA 12.4</li>
+
+<li><code>cu123</code>:  Use the PyTorch index for CUDA 12.3</li>
+
+<li><code>cu122</code>:  Use the PyTorch index for CUDA 12.2</li>
+
+<li><code>cu121</code>:  Use the PyTorch index for CUDA 12.1</li>
+
+<li><code>cu120</code>:  Use the PyTorch index for CUDA 12.0</li>
+
+<li><code>cu118</code>:  Use the PyTorch index for CUDA 11.8</li>
+
+<li><code>cu117</code>:  Use the PyTorch index for CUDA 11.7</li>
+
+<li><code>cu116</code>:  Use the PyTorch index for CUDA 11.6</li>
+
+<li><code>cu115</code>:  Use the PyTorch index for CUDA 11.5</li>
+
+<li><code>cu114</code>:  Use the PyTorch index for CUDA 11.4</li>
+
+<li><code>cu113</code>:  Use the PyTorch index for CUDA 11.3</li>
+
+<li><code>cu112</code>:  Use the PyTorch index for CUDA 11.2</li>
+
+<li><code>cu111</code>:  Use the PyTorch index for CUDA 11.1</li>
+
+<li><code>cu110</code>:  Use the PyTorch index for CUDA 11.0</li>
+
+<li><code>cu102</code>:  Use the PyTorch index for CUDA 10.2</li>
+
+<li><code>cu101</code>:  Use the PyTorch index for CUDA 10.1</li>
+
+<li><code>cu100</code>:  Use the PyTorch index for CUDA 10.0</li>
+
+<li><code>cu92</code>:  Use the PyTorch index for CUDA 9.2</li>
+
+<li><code>cu91</code>:  Use the PyTorch index for CUDA 9.1</li>
+
+<li><code>cu90</code>:  Use the PyTorch index for CUDA 9.0</li>
+
+<li><code>cu80</code>:  Use the PyTorch index for CUDA 8.0</li>
+</ul>
 </dd><dt id="uv-pip-sync--verbose"><a href="#uv-pip-sync--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
 <p>You can configure fine-grained logging using the <code>RUST_LOG</code> environment variable. (&lt;https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives&gt;)</p>
@@ -6417,7 +6615,7 @@ Install packages into an environment
 <h3 class="cli-reference">Usage</h3>
 
 ```
-uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDITABLE>>
+uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDITABLE>|--group <GROUP>>
 ```
 
 <h3 class="cli-reference">Arguments</h3>
@@ -6434,7 +6632,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <p>Only applies to <code>pyproject.toml</code>, <code>setup.py</code>, and <code>setup.cfg</code> sources.</p>
 
-</dd><dt id="uv-pip-install--allow-insecure-host"><a href="#uv-pip-install--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-pip-install--allow-insecure-host"><a href="#uv-pip-install--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -6448,7 +6646,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 <p>WARNING: <code>--break-system-packages</code> is intended for use in continuous integration (CI) environments, when installing into Python installations that are managed by an external package manager, like <code>apt</code>. It should be used with caution, as such Python installations explicitly recommend against modifications by other package managers (like uv or <code>pip</code>).</p>
 
 <p>May also be set with the <code>UV_BREAK_SYSTEM_PACKAGES</code> environment variable.</p>
-</dd><dt id="uv-pip-install--build-constraints"><a href="#uv-pip-install--build-constraints"><code>--build-constraints</code></a>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
+</dd><dt id="uv-pip-install--build-constraints"><a href="#uv-pip-install--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building source distributions.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -6473,7 +6671,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <li><code>never</code>:  Disables colored output</li>
 </ul>
-</dd><dt id="uv-pip-install--compile-bytecode"><a href="#uv-pip-install--compile-bytecode"><code>--compile-bytecode</code></a></dt><dd><p>Compile Python files to bytecode after installation.</p>
+</dd><dt id="uv-pip-install--compile-bytecode"><a href="#uv-pip-install--compile-bytecode"><code>--compile-bytecode</code></a>, <code>--compile</code></dt><dd><p>Compile Python files to bytecode after installation.</p>
 
 <p>By default, uv does not compile Python (<code>.py</code>) files to bytecode (<code>__pycache__/*.pyc</code>); instead, compilation is performed lazily the first time a module is imported. For use-cases in which start time is critical, such as CLI applications and Docker containers, this option can be enabled to trade longer installation times for faster start times.</p>
 
@@ -6485,9 +6683,9 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-pip-install--config-setting"><a href="#uv-pip-install--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-pip-install--config-setting"><a href="#uv-pip-install--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
-</dd><dt id="uv-pip-install--constraints"><a href="#uv-pip-install--constraints"><code>--constraints</code></a>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
+</dd><dt id="uv-pip-install--constraints"><a href="#uv-pip-install--constraints"><code>--constraints</code></a>, <code>--constraint</code>, <code>-c</code> <i>constraints</i></dt><dd><p>Constrain versions using the given requirements files.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a requirement that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the installation of that package.</p>
 
@@ -6552,6 +6750,12 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <li><code>requires-python</code>:  Optimize for selecting latest supported version of each package, for each supported Python version</li>
 </ul>
+</dd><dt id="uv-pip-install--group"><a href="#uv-pip-install--group"><code>--group</code></a> <i>group</i></dt><dd><p>Install the specified dependency group from a <code>pyproject.toml</code>.</p>
+
+<p>If no path is provided, the <code>pyproject.toml</code> in the working directory is used.</p>
+
+<p>May be provided multiple times.</p>
+
 </dd><dt id="uv-pip-install--help"><a href="#uv-pip-install--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
 </dd><dt id="uv-pip-install--index"><a href="#uv-pip-install--index"><code>--index</code></a> <i>index</i></dt><dd><p>The URLs to use when resolving dependencies, in addition to the default index.</p>
@@ -6612,6 +6816,11 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-pip-install--managed-python"><a href="#uv-pip-install--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-install--native-tls"><a href="#uv-pip-install--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -6640,7 +6849,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <p>Assumes that the packages&#8217; build dependencies specified by PEP 518 are already installed.</p>
 
-</dd><dt id="uv-pip-install--no-cache"><a href="#uv-pip-install--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-install--no-cache"><a href="#uv-pip-install--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-install--no-config"><a href="#uv-pip-install--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -6652,6 +6861,11 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 </dd><dt id="uv-pip-install--no-index"><a href="#uv-pip-install--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-pip-install--no-managed-python"><a href="#uv-pip-install--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-install--no-progress"><a href="#uv-pip-install--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -6677,7 +6891,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <p>Multiple packages may be provided. Disable binaries for all packages with <code>:all:</code>. Clear previously specified packages with <code>:none:</code>.</p>
 
-</dd><dt id="uv-pip-install--overrides"><a href="#uv-pip-install--overrides"><code>--overrides</code></a> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
+</dd><dt id="uv-pip-install--overrides"><a href="#uv-pip-install--overrides"><code>--overrides</code></a>, <code>--override</code> <i>overrides</i></dt><dd><p>Override versions using the given requirements files.</p>
 
 <p>Overrides files are <code>requirements.txt</code>-like files that force a specific version of a requirement to be installed, regardless of the requirements declared by any constituent package, and regardless of whether this would be considered an invalid resolution.</p>
 
@@ -6716,6 +6930,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-install--python"><a href="#uv-pip-install--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter into which packages should be installed.</p>
 
 <p>By default, installation requires a virtual environment. A path to an alternative Python can be provided, but it is only recommended in continuous integration (CI) environments and should be used with caution, as it can modify the system Python installation.</p>
@@ -6808,33 +7023,19 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 
 <li><code>aarch64-manylinux_2_40</code>:  An ARM64 target for the <code>manylinux_2_40</code> platform</li>
 </ul>
-</dd><dt id="uv-pip-install--python-preference"><a href="#uv-pip-install--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
-
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
 </dd><dt id="uv-pip-install--python-version"><a href="#uv-pip-install--python-version"><code>--python-version</code></a> <i>python-version</i></dt><dd><p>The minimum Python version that should be supported by the requirements (e.g., <code>3.7</code> or <code>3.7.9</code>).</p>
 
 <p>If a patch version is omitted, the minimum patch version is assumed. For example, <code>3.7</code> is mapped to <code>3.7.0</code>.</p>
 
-</dd><dt id="uv-pip-install--quiet"><a href="#uv-pip-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+</dd><dt id="uv-pip-install--quiet"><a href="#uv-pip-install--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
+
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-install--refresh"><a href="#uv-pip-install--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
 </dd><dt id="uv-pip-install--refresh-package"><a href="#uv-pip-install--refresh-package"><code>--refresh-package</code></a> <i>refresh-package</i></dt><dd><p>Refresh cached data for a specific package</p>
 
-</dd><dt id="uv-pip-install--reinstall"><a href="#uv-pip-install--reinstall"><code>--reinstall</code></a></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
+</dd><dt id="uv-pip-install--reinstall"><a href="#uv-pip-install--reinstall"><code>--reinstall</code></a>, <code>--force-reinstall</code></dt><dd><p>Reinstall all packages, regardless of whether they&#8217;re already installed. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-pip-install--reinstall-package"><a href="#uv-pip-install--reinstall-package"><code>--reinstall-package</code></a> <i>reinstall-package</i></dt><dd><p>Reinstall a specific package, regardless of whether it&#8217;s already installed. Implies <code>--refresh-package</code></p>
 
@@ -6851,7 +7052,7 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 </ul>
 
 <p>May also be set with the <code>UV_REQUIRE_HASHES</code> environment variable.</p>
-</dd><dt id="uv-pip-install--requirements"><a href="#uv-pip-install--requirements"><code>--requirements</code></a>, <code>-r</code> <i>requirements</i></dt><dd><p>Install all packages listed in the given <code>requirements.txt</code> files.</p>
+</dd><dt id="uv-pip-install--requirements"><a href="#uv-pip-install--requirements"><code>--requirements</code></a>, <code>--requirement</code>, <code>-r</code> <i>requirements</i></dt><dd><p>Install all packages listed in the given <code>requirements.txt</code> or <code>pylock.toml</code> files.</p>
 
 <p>If a <code>pyproject.toml</code>, <code>setup.py</code>, or <code>setup.cfg</code> file is provided, uv will extract the requirements for the relevant project.</p>
 
@@ -6882,6 +7083,72 @@ uv pip install [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>|--editable <EDIT
 <p>May also be set with the <code>UV_SYSTEM_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-install--target"><a href="#uv-pip-install--target"><code>--target</code></a> <i>target</i></dt><dd><p>Install packages into the specified directory, rather than into the virtual or system Python environment. The packages will be installed at the top-level of the directory</p>
 
+</dd><dt id="uv-pip-install--torch-backend"><a href="#uv-pip-install--torch-backend"><code>--torch-backend</code></a> <i>torch-backend</i></dt><dd><p>The backend to use when fetching packages in the PyTorch ecosystem (e.g., <code>cpu</code>, <code>cu126</code>, or <code>auto</code>)</p>
+
+<p>When set, uv will ignore the configured index URLs for packages in the PyTorch ecosystem, and will instead use the defined backend.</p>
+
+<p>For example, when set to <code>cpu</code>, uv will use the CPU-only PyTorch index; when set to <code>cu126</code>, uv will use the PyTorch index for CUDA 12.6.</p>
+
+<p>The <code>auto</code> mode will attempt to detect the appropriate PyTorch index based on the currently installed CUDA drivers.</p>
+
+<p>This option is in preview and may change in any future release.</p>
+
+<p>May also be set with the <code>UV_TORCH_BACKEND</code> environment variable.</p>
+<p>Possible values:</p>
+
+<ul>
+<li><code>auto</code>:  Select the appropriate PyTorch index based on the operating system and CUDA driver version</li>
+
+<li><code>cpu</code>:  Use the CPU-only PyTorch index</li>
+
+<li><code>cu128</code>:  Use the PyTorch index for CUDA 12.8</li>
+
+<li><code>cu126</code>:  Use the PyTorch index for CUDA 12.6</li>
+
+<li><code>cu125</code>:  Use the PyTorch index for CUDA 12.5</li>
+
+<li><code>cu124</code>:  Use the PyTorch index for CUDA 12.4</li>
+
+<li><code>cu123</code>:  Use the PyTorch index for CUDA 12.3</li>
+
+<li><code>cu122</code>:  Use the PyTorch index for CUDA 12.2</li>
+
+<li><code>cu121</code>:  Use the PyTorch index for CUDA 12.1</li>
+
+<li><code>cu120</code>:  Use the PyTorch index for CUDA 12.0</li>
+
+<li><code>cu118</code>:  Use the PyTorch index for CUDA 11.8</li>
+
+<li><code>cu117</code>:  Use the PyTorch index for CUDA 11.7</li>
+
+<li><code>cu116</code>:  Use the PyTorch index for CUDA 11.6</li>
+
+<li><code>cu115</code>:  Use the PyTorch index for CUDA 11.5</li>
+
+<li><code>cu114</code>:  Use the PyTorch index for CUDA 11.4</li>
+
+<li><code>cu113</code>:  Use the PyTorch index for CUDA 11.3</li>
+
+<li><code>cu112</code>:  Use the PyTorch index for CUDA 11.2</li>
+
+<li><code>cu111</code>:  Use the PyTorch index for CUDA 11.1</li>
+
+<li><code>cu110</code>:  Use the PyTorch index for CUDA 11.0</li>
+
+<li><code>cu102</code>:  Use the PyTorch index for CUDA 10.2</li>
+
+<li><code>cu101</code>:  Use the PyTorch index for CUDA 10.1</li>
+
+<li><code>cu100</code>:  Use the PyTorch index for CUDA 10.0</li>
+
+<li><code>cu92</code>:  Use the PyTorch index for CUDA 9.2</li>
+
+<li><code>cu91</code>:  Use the PyTorch index for CUDA 9.1</li>
+
+<li><code>cu90</code>:  Use the PyTorch index for CUDA 9.0</li>
+
+<li><code>cu80</code>:  Use the PyTorch index for CUDA 8.0</li>
+</ul>
 </dd><dt id="uv-pip-install--upgrade"><a href="#uv-pip-install--upgrade"><code>--upgrade</code></a>, <code>-U</code></dt><dd><p>Allow package upgrades, ignoring pinned versions in any existing output file. Implies <code>--refresh</code></p>
 
 </dd><dt id="uv-pip-install--upgrade-package"><a href="#uv-pip-install--upgrade-package"><code>--upgrade-package</code></a>, <code>-P</code> <i>upgrade-package</i></dt><dd><p>Allow upgrades for a specific package, ignoring pinned versions in any existing output file. Implies <code>--refresh-package</code></p>
@@ -6912,7 +7179,7 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-uninstall--allow-insecure-host"><a href="#uv-pip-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-uninstall--allow-insecure-host"><a href="#uv-pip-uninstall--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -6975,6 +7242,11 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 
 <li><code>subprocess</code>:  Use the <code>keyring</code> command for credential lookup</li>
 </ul>
+</dd><dt id="uv-pip-uninstall--managed-python"><a href="#uv-pip-uninstall--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-uninstall--native-tls"><a href="#uv-pip-uninstall--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -6982,7 +7254,7 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-uninstall--no-break-system-packages"><a href="#uv-pip-uninstall--no-break-system-packages"><code>--no-break-system-packages</code></a></dt><dt id="uv-pip-uninstall--no-cache"><a href="#uv-pip-uninstall--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-uninstall--no-break-system-packages"><a href="#uv-pip-uninstall--no-break-system-packages"><code>--no-break-system-packages</code></a></dt><dt id="uv-pip-uninstall--no-cache"><a href="#uv-pip-uninstall--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-uninstall--no-config"><a href="#uv-pip-uninstall--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -6990,6 +7262,11 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-pip-uninstall--no-managed-python"><a href="#uv-pip-uninstall--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-uninstall--no-progress"><a href="#uv-pip-uninstall--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7014,6 +7291,7 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-uninstall--python"><a href="#uv-pip-uninstall--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter from which packages should be uninstalled.</p>
 
 <p>By default, uninstallation requires a virtual environment. A path to an alternative Python can be provided, but it is only recommended in continuous integration (CI) environments and should be used with caution, as it can modify the system Python installation.</p>
@@ -7021,25 +7299,11 @@ uv pip uninstall [OPTIONS] <PACKAGE|--requirements <REQUIREMENTS>>
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-uninstall--python-preference"><a href="#uv-pip-uninstall--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-uninstall--quiet"><a href="#uv-pip-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-uninstall--quiet"><a href="#uv-pip-uninstall--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
-
-</dd><dt id="uv-pip-uninstall--requirements"><a href="#uv-pip-uninstall--requirements"><code>--requirements</code></a>, <code>-r</code> <i>requirements</i></dt><dd><p>Uninstall all packages listed in the given requirements files</p>
+</dd><dt id="uv-pip-uninstall--requirements"><a href="#uv-pip-uninstall--requirements"><code>--requirements</code></a>, <code>--requirement</code>, <code>-r</code> <i>requirements</i></dt><dd><p>Uninstall all packages listed in the given requirements files</p>
 
 </dd><dt id="uv-pip-uninstall--system"><a href="#uv-pip-uninstall--system"><code>--system</code></a></dt><dd><p>Use the system Python to uninstall packages.</p>
 
@@ -7070,7 +7334,7 @@ uv pip freeze [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-freeze--allow-insecure-host"><a href="#uv-pip-freeze--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-freeze--allow-insecure-host"><a href="#uv-pip-freeze--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -7114,6 +7378,11 @@ uv pip freeze [OPTIONS]
 
 </dd><dt id="uv-pip-freeze--help"><a href="#uv-pip-freeze--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-pip-freeze--managed-python"><a href="#uv-pip-freeze--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-freeze--native-tls"><a href="#uv-pip-freeze--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -7121,7 +7390,7 @@ uv pip freeze [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-freeze--no-cache"><a href="#uv-pip-freeze--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-freeze--no-cache"><a href="#uv-pip-freeze--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-freeze--no-config"><a href="#uv-pip-freeze--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -7129,6 +7398,11 @@ uv pip freeze [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-pip-freeze--no-managed-python"><a href="#uv-pip-freeze--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-freeze--no-progress"><a href="#uv-pip-freeze--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7153,6 +7427,7 @@ uv pip freeze [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-freeze--python"><a href="#uv-pip-freeze--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter for which packages should be listed.</p>
 
 <p>By default, uv lists packages in a virtual environment but will show packages in a system Python environment if no virtual environment is found.</p>
@@ -7160,23 +7435,9 @@ uv pip freeze [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-freeze--python-preference"><a href="#uv-pip-freeze--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-freeze--quiet"><a href="#uv-pip-freeze--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-freeze--quiet"><a href="#uv-pip-freeze--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-freeze--strict"><a href="#uv-pip-freeze--strict"><code>--strict</code></a></dt><dd><p>Validate the Python environment, to detect packages with missing dependencies and other issues</p>
 
@@ -7207,7 +7468,7 @@ uv pip list [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-list--allow-insecure-host"><a href="#uv-pip-list--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-list--allow-insecure-host"><a href="#uv-pip-list--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -7335,6 +7596,11 @@ uv pip list [OPTIONS]
 
 <li><code>subprocess</code>:  Use the <code>keyring</code> command for credential lookup</li>
 </ul>
+</dd><dt id="uv-pip-list--managed-python"><a href="#uv-pip-list--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-list--native-tls"><a href="#uv-pip-list--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -7342,7 +7608,7 @@ uv pip list [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-list--no-cache"><a href="#uv-pip-list--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-list--no-cache"><a href="#uv-pip-list--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-list--no-config"><a href="#uv-pip-list--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -7352,6 +7618,11 @@ uv pip list [OPTIONS]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-pip-list--no-index"><a href="#uv-pip-list--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-pip-list--no-managed-python"><a href="#uv-pip-list--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-list--no-progress"><a href="#uv-pip-list--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7378,6 +7649,7 @@ uv pip list [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-list--python"><a href="#uv-pip-list--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter for which packages should be listed.</p>
 
 <p>By default, uv lists packages in a virtual environment but will show packages in a system Python environment if no virtual environment is found.</p>
@@ -7385,23 +7657,9 @@ uv pip list [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-list--python-preference"><a href="#uv-pip-list--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-list--quiet"><a href="#uv-pip-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-list--quiet"><a href="#uv-pip-list--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-list--strict"><a href="#uv-pip-list--strict"><code>--strict</code></a></dt><dd><p>Validate the Python environment, to detect packages with missing dependencies and other issues</p>
 
@@ -7438,7 +7696,7 @@ uv pip show [OPTIONS] [PACKAGE]...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-show--allow-insecure-host"><a href="#uv-pip-show--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-show--allow-insecure-host"><a href="#uv-pip-show--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -7482,6 +7740,11 @@ uv pip show [OPTIONS] [PACKAGE]...
 
 </dd><dt id="uv-pip-show--help"><a href="#uv-pip-show--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-pip-show--managed-python"><a href="#uv-pip-show--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-show--native-tls"><a href="#uv-pip-show--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -7489,7 +7752,7 @@ uv pip show [OPTIONS] [PACKAGE]...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-show--no-cache"><a href="#uv-pip-show--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-show--no-cache"><a href="#uv-pip-show--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-show--no-config"><a href="#uv-pip-show--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -7497,6 +7760,11 @@ uv pip show [OPTIONS] [PACKAGE]...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-pip-show--no-managed-python"><a href="#uv-pip-show--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-show--no-progress"><a href="#uv-pip-show--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7519,6 +7787,7 @@ uv pip show [OPTIONS] [PACKAGE]...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-show--python"><a href="#uv-pip-show--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to find the package in.</p>
 
 <p>By default, uv looks for packages in a virtual environment but will look for packages in a system Python environment if no virtual environment is found.</p>
@@ -7526,23 +7795,9 @@ uv pip show [OPTIONS] [PACKAGE]...
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-show--python-preference"><a href="#uv-pip-show--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-show--quiet"><a href="#uv-pip-show--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-show--quiet"><a href="#uv-pip-show--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-show--strict"><a href="#uv-pip-show--strict"><code>--strict</code></a></dt><dd><p>Validate the Python environment, to detect packages with missing dependencies and other issues</p>
 
@@ -7573,7 +7828,7 @@ uv pip tree [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-tree--allow-insecure-host"><a href="#uv-pip-tree--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-tree--allow-insecure-host"><a href="#uv-pip-tree--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -7672,7 +7927,7 @@ uv pip tree [OPTIONS]
 <p>The index given by this flag is given lower priority than all other indexes specified via the <code>--extra-index-url</code> flag.</p>
 
 <p>May also be set with the <code>UV_INDEX_URL</code> environment variable.</p>
-</dd><dt id="uv-pip-tree--invert"><a href="#uv-pip-tree--invert"><code>--invert</code></a></dt><dd><p>Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package</p>
+</dd><dt id="uv-pip-tree--invert"><a href="#uv-pip-tree--invert"><code>--invert</code></a>, <code>--reverse</code></dt><dd><p>Show the reverse dependencies for the given package. This flag will invert the tree and display the packages that depend on the given package</p>
 
 </dd><dt id="uv-pip-tree--keyring-provider"><a href="#uv-pip-tree--keyring-provider"><code>--keyring-provider</code></a> <i>keyring-provider</i></dt><dd><p>Attempt to use <code>keyring</code> for authentication for index URLs.</p>
 
@@ -7688,6 +7943,11 @@ uv pip tree [OPTIONS]
 
 <li><code>subprocess</code>:  Use the <code>keyring</code> command for credential lookup</li>
 </ul>
+</dd><dt id="uv-pip-tree--managed-python"><a href="#uv-pip-tree--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-tree--native-tls"><a href="#uv-pip-tree--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -7695,7 +7955,7 @@ uv pip tree [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-tree--no-cache"><a href="#uv-pip-tree--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-tree--no-cache"><a href="#uv-pip-tree--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-tree--no-config"><a href="#uv-pip-tree--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -7707,6 +7967,11 @@ uv pip tree [OPTIONS]
 
 </dd><dt id="uv-pip-tree--no-index"><a href="#uv-pip-tree--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-pip-tree--no-managed-python"><a href="#uv-pip-tree--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-tree--no-progress"><a href="#uv-pip-tree--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7733,6 +7998,7 @@ uv pip tree [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-tree--prune"><a href="#uv-pip-tree--prune"><code>--prune</code></a> <i>prune</i></dt><dd><p>Prune the given package from the display of the dependency tree</p>
 
 </dd><dt id="uv-pip-tree--python"><a href="#uv-pip-tree--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter for which packages should be listed.</p>
@@ -7742,23 +8008,9 @@ uv pip tree [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-tree--python-preference"><a href="#uv-pip-tree--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-tree--quiet"><a href="#uv-pip-tree--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-tree--quiet"><a href="#uv-pip-tree--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-tree--show-version-specifiers"><a href="#uv-pip-tree--show-version-specifiers"><code>--show-version-specifiers</code></a></dt><dd><p>Show the version constraint(s) imposed on each package</p>
 
@@ -7791,7 +8043,7 @@ uv pip check [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-pip-check--allow-insecure-host"><a href="#uv-pip-check--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-pip-check--allow-insecure-host"><a href="#uv-pip-check--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -7833,6 +8085,11 @@ uv pip check [OPTIONS]
 
 </dd><dt id="uv-pip-check--help"><a href="#uv-pip-check--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-pip-check--managed-python"><a href="#uv-pip-check--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-check--native-tls"><a href="#uv-pip-check--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -7840,7 +8097,7 @@ uv pip check [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-pip-check--no-cache"><a href="#uv-pip-check--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-pip-check--no-cache"><a href="#uv-pip-check--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-pip-check--no-config"><a href="#uv-pip-check--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -7848,6 +8105,11 @@ uv pip check [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-pip-check--no-managed-python"><a href="#uv-pip-check--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-pip-check--no-progress"><a href="#uv-pip-check--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -7870,6 +8132,7 @@ uv pip check [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-pip-check--python"><a href="#uv-pip-check--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter for which packages should be checked.</p>
 
 <p>By default, uv checks packages in a virtual environment but will check packages in a system Python environment if no virtual environment is found.</p>
@@ -7877,23 +8140,9 @@ uv pip check [OPTIONS]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-pip-check--python-preference"><a href="#uv-pip-check--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-pip-check--quiet"><a href="#uv-pip-check--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-pip-check--quiet"><a href="#uv-pip-check--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-pip-check--system"><a href="#uv-pip-check--system"><code>--system</code></a></dt><dd><p>Check packages in the system Python environment.</p>
 
@@ -7946,7 +8195,7 @@ uv venv [OPTIONS] [PATH]
 
 <p>WARNING: This option can lead to unexpected behavior if the existing virtual environment and the newly-created virtual environment are linked to different Python interpreters.</p>
 
-</dd><dt id="uv-venv--allow-insecure-host"><a href="#uv-venv--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-venv--allow-insecure-host"><a href="#uv-venv--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -8074,6 +8323,11 @@ uv venv [OPTIONS] [PATH]
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-venv--managed-python"><a href="#uv-venv--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-venv--native-tls"><a href="#uv-venv--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -8081,7 +8335,7 @@ uv venv [OPTIONS] [PATH]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-venv--no-cache"><a href="#uv-venv--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-venv--no-cache"><a href="#uv-venv--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-venv--no-config"><a href="#uv-venv--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -8091,12 +8345,17 @@ uv venv [OPTIONS] [PATH]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-venv--no-index"><a href="#uv-venv--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-venv--no-managed-python"><a href="#uv-venv--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-venv--no-progress"><a href="#uv-venv--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
 
 <p>May also be set with the <code>UV_NO_PROGRESS</code> environment variable.</p>
-</dd><dt id="uv-venv--no-project"><a href="#uv-venv--no-project"><code>--no-project</code></a></dt><dd><p>Avoid discovering a project or workspace.</p>
+</dd><dt id="uv-venv--no-project"><a href="#uv-venv--no-project"><code>--no-project</code></a>, <code>--no-workspace</code></dt><dd><p>Avoid discovering a project or workspace.</p>
 
 <p>By default, uv searches for projects in the current directory or any parent directory to determine the default path of the virtual environment and check for Python version constraints, if any.</p>
 
@@ -8117,6 +8376,7 @@ uv venv [OPTIONS] [PATH]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-venv--prompt"><a href="#uv-venv--prompt"><code>--prompt</code></a> <i>prompt</i></dt><dd><p>Provide an alternative prompt prefix for the virtual environment.</p>
 
 <p>By default, the prompt is dependent on whether a path was provided to <code>uv venv</code>. If provided (e.g, <code>uv venv project</code>), the prompt is set to the directory name. If not provided (<code>uv venv</code>), the prompt is set to the current directory&#8217;s name.</p>
@@ -8130,23 +8390,9 @@ uv venv [OPTIONS] [PATH]
 <p>See <a href="#uv-python">uv python</a> for details on Python discovery and supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-venv--python-preference"><a href="#uv-venv--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-venv--quiet"><a href="#uv-venv--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-venv--quiet"><a href="#uv-venv--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-venv--refresh"><a href="#uv-venv--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
@@ -8205,13 +8451,13 @@ uv build [OPTIONS] [SRC]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-build--all-packages"><a href="#uv-build--all-packages"><code>--all-packages</code></a></dt><dd><p>Builds all packages in the workspace.</p>
+<dl class="cli-reference"><dt id="uv-build--all-packages"><a href="#uv-build--all-packages"><code>--all-packages</code></a>, <code>--all</code></dt><dd><p>Builds all packages in the workspace.</p>
 
 <p>The workspace will be discovered from the provided source directory, or the current directory if no source directory is provided.</p>
 
 <p>If the workspace member does not exist, uv will exit with an error.</p>
 
-</dd><dt id="uv-build--allow-insecure-host"><a href="#uv-build--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+</dd><dt id="uv-build--allow-insecure-host"><a href="#uv-build--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -8220,7 +8466,7 @@ uv build [OPTIONS] [SRC]
 <p>WARNING: Hosts included in this list will not be verified against the system&#8217;s certificate store. Only use <code>--allow-insecure-host</code> in a secure network with verified sources, as it bypasses SSL verification and could expose you to MITM attacks.</p>
 
 <p>May also be set with the <code>UV_INSECURE_HOST</code> environment variable.</p>
-</dd><dt id="uv-build--build-constraints"><a href="#uv-build--build-constraints"><code>--build-constraints</code></a>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building distributions.</p>
+</dd><dt id="uv-build--build-constraints"><a href="#uv-build--build-constraints"><code>--build-constraints</code></a>, <code>--build-constraint</code>, <code>-b</code> <i>build-constraints</i></dt><dd><p>Constrain build dependencies using the given requirements files when building distributions.</p>
 
 <p>Constraints files are <code>requirements.txt</code>-like files that only control the <em>version</em> of a build dependency that&#8217;s installed. However, including a package in a constraints file will <em>not</em> trigger the inclusion of that package on its own.</p>
 
@@ -8250,7 +8496,7 @@ uv build [OPTIONS] [SRC]
 <p>While uv configuration can be included in a <code>pyproject.toml</code> file, it is not allowed in this context.</p>
 
 <p>May also be set with the <code>UV_CONFIG_FILE</code> environment variable.</p>
-</dd><dt id="uv-build--config-setting"><a href="#uv-build--config-setting"><code>--config-setting</code></a>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
+</dd><dt id="uv-build--config-setting"><a href="#uv-build--config-setting"><code>--config-setting</code></a>, <code>--config-settings</code>, <code>-C</code> <i>config-setting</i></dt><dd><p>Settings to pass to the PEP 517 build backend, specified as <code>KEY=VALUE</code> pairs</p>
 
 </dd><dt id="uv-build--default-index"><a href="#uv-build--default-index"><code>--default-index</code></a> <i>default-index</i></dt><dd><p>The URL of the default package index (by default: &lt;https://pypi.org/simple&gt;).</p>
 
@@ -8364,6 +8610,11 @@ uv build [OPTIONS] [SRC]
 
 <li><code>symlink</code>:  Symbolically link packages from the wheel into the <code>site-packages</code> directory</li>
 </ul>
+</dd><dt id="uv-build--managed-python"><a href="#uv-build--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-build--native-tls"><a href="#uv-build--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -8383,6 +8634,7 @@ uv build [OPTIONS] [SRC]
 
 <p>When enabled, resolving will not run arbitrary Python code. The cached wheels of already-built source distributions will be reused, but operations that require building distributions will exit with an error.</p>
 
+<p>May also be set with the <code>UV_NO_BUILD</code> environment variable.</p>
 </dd><dt id="uv-build--no-build-isolation"><a href="#uv-build--no-build-isolation"><code>--no-build-isolation</code></a></dt><dd><p>Disable isolation when building source distributions.</p>
 
 <p>Assumes that build dependencies specified by PEP 518 are already installed.</p>
@@ -8396,7 +8648,8 @@ uv build [OPTIONS] [SRC]
 
 </dd><dt id="uv-build--no-build-package"><a href="#uv-build--no-build-package"><code>--no-build-package</code></a> <i>no-build-package</i></dt><dd><p>Don&#8217;t build source distributions for a specific package</p>
 
-</dd><dt id="uv-build--no-cache"><a href="#uv-build--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+<p>May also be set with the <code>UV_NO_BUILD_PACKAGE</code> environment variable.</p>
+</dd><dt id="uv-build--no-cache"><a href="#uv-build--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-build--no-config"><a href="#uv-build--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -8406,6 +8659,11 @@ uv build [OPTIONS] [SRC]
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
 </dd><dt id="uv-build--no-index"><a href="#uv-build--no-index"><code>--no-index</code></a></dt><dd><p>Ignore the registry index (e.g., PyPI), instead relying on direct URL dependencies and those provided via <code>--find-links</code></p>
 
+</dd><dt id="uv-build--no-managed-python"><a href="#uv-build--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-build--no-progress"><a href="#uv-build--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -8463,6 +8721,7 @@ uv build [OPTIONS] [SRC]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-build--python"><a href="#uv-build--python"><code>--python</code></a>, <code>-p</code> <i>python</i></dt><dd><p>The Python interpreter to use for the build environment.</p>
 
 <p>By default, builds are executed in isolated virtual environments. The discovered interpreter will be used to create those environments, and will be symlinked or copied in depending on the platform.</p>
@@ -8470,23 +8729,9 @@ uv build [OPTIONS] [SRC]
 <p>See <a href="#uv-python">uv python</a> to view supported request formats.</p>
 
 <p>May also be set with the <code>UV_PYTHON</code> environment variable.</p>
-</dd><dt id="uv-build--python-preference"><a href="#uv-build--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-build--quiet"><a href="#uv-build--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-build--quiet"><a href="#uv-build--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-build--refresh"><a href="#uv-build--refresh"><code>--refresh</code></a></dt><dd><p>Refresh all cached data</p>
 
@@ -8555,7 +8800,7 @@ uv publish [OPTIONS] [FILES]...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-publish--allow-insecure-host"><a href="#uv-publish--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-publish--allow-insecure-host"><a href="#uv-publish--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -8612,9 +8857,17 @@ uv publish [OPTIONS] [FILES]...
 
 <p>The index must have a <code>publish-url</code> setting, for example:</p>
 
-<pre><code class="language-toml [[tool.uv.index]] name = &quot;pypi&quot; url = &quot;https://pypi.org/simple&quot; publish-url = &quot;https://upload.pypi.org/legacy/&quot; ```">The index `url` will be used to check for existing files to skip duplicate uploads.
+<pre><code class="language-toml">[[tool.uv.index]]
+name = &quot;pypi&quot;
+url = &quot;https://pypi.org/simple&quot;
+publish-url = &quot;https://upload.pypi.org/legacy/&quot;</code></pre>
 
-With these settings, the following two calls are equivalent:</code></pre>
+<p>The index <code>url</code> will be used to check for existing files to skip duplicate uploads.</p>
+
+<p>With these settings, the following two calls are equivalent:</p>
+
+<pre><code class="language-shell">uv publish --index pypi
+uv publish --publish-url https://upload.pypi.org/legacy/ --check-url https://pypi.org/simple</code></pre>
 
 <p>May also be set with the <code>UV_PUBLISH_INDEX</code> environment variable.</p>
 </dd><dt id="uv-publish--keyring-provider"><a href="#uv-publish--keyring-provider"><code>--keyring-provider</code></a> <i>keyring-provider</i></dt><dd><p>Attempt to use <code>keyring</code> for authentication for remote requirements files.</p>
@@ -8631,6 +8884,11 @@ With these settings, the following two calls are equivalent:</code></pre>
 
 <li><code>subprocess</code>:  Use the <code>keyring</code> command for credential lookup</li>
 </ul>
+</dd><dt id="uv-publish--managed-python"><a href="#uv-publish--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-publish--native-tls"><a href="#uv-publish--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -8638,7 +8896,7 @@ With these settings, the following two calls are equivalent:</code></pre>
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-publish--no-cache"><a href="#uv-publish--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-publish--no-cache"><a href="#uv-publish--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-publish--no-config"><a href="#uv-publish--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -8646,6 +8904,11 @@ With these settings, the following two calls are equivalent:</code></pre>
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-publish--no-managed-python"><a href="#uv-publish--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-publish--no-progress"><a href="#uv-publish--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -8671,6 +8934,7 @@ With these settings, the following two calls are equivalent:</code></pre>
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd><dt id="uv-publish--publish-url"><a href="#uv-publish--publish-url"><code>--publish-url</code></a> <i>publish-url</i></dt><dd><p>The URL of the upload endpoint (not the index URL).</p>
 
 <p>Note that there are typically different URLs for index access (e.g., <code>https:://.../simple</code>) and index upload.</p>
@@ -8678,23 +8942,9 @@ With these settings, the following two calls are equivalent:</code></pre>
 <p>Defaults to PyPI&#8217;s publish URL (&lt;https://upload.pypi.org/legacy/&gt;).</p>
 
 <p>May also be set with the <code>UV_PUBLISH_URL</code> environment variable.</p>
-</dd><dt id="uv-publish--python-preference"><a href="#uv-publish--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+</dd><dt id="uv-publish--quiet"><a href="#uv-publish--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-publish--quiet"><a href="#uv-publish--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-publish--token"><a href="#uv-publish--token"><code>--token</code></a>, <code>-t</code> <i>token</i></dt><dd><p>The token for the upload.</p>
 
@@ -8763,7 +9013,7 @@ uv cache clean [OPTIONS] [PACKAGE]...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-cache-clean--allow-insecure-host"><a href="#uv-cache-clean--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-cache-clean--allow-insecure-host"><a href="#uv-cache-clean--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -8805,6 +9055,11 @@ uv cache clean [OPTIONS] [PACKAGE]...
 
 </dd><dt id="uv-cache-clean--help"><a href="#uv-cache-clean--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-cache-clean--managed-python"><a href="#uv-cache-clean--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-clean--native-tls"><a href="#uv-cache-clean--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -8812,7 +9067,7 @@ uv cache clean [OPTIONS] [PACKAGE]...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-cache-clean--no-cache"><a href="#uv-cache-clean--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-cache-clean--no-cache"><a href="#uv-cache-clean--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-cache-clean--no-config"><a href="#uv-cache-clean--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -8820,6 +9075,11 @@ uv cache clean [OPTIONS] [PACKAGE]...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-cache-clean--no-managed-python"><a href="#uv-cache-clean--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-clean--no-progress"><a href="#uv-cache-clean--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -8842,23 +9102,10 @@ uv cache clean [OPTIONS] [PACKAGE]...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-cache-clean--python-preference"><a href="#uv-cache-clean--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-cache-clean--quiet"><a href="#uv-cache-clean--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-cache-clean--quiet"><a href="#uv-cache-clean--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-cache-clean--verbose"><a href="#uv-cache-clean--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -8880,7 +9127,7 @@ uv cache prune [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-cache-prune--allow-insecure-host"><a href="#uv-cache-prune--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-cache-prune--allow-insecure-host"><a href="#uv-cache-prune--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -8928,6 +9175,11 @@ uv cache prune [OPTIONS]
 
 </dd><dt id="uv-cache-prune--help"><a href="#uv-cache-prune--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-cache-prune--managed-python"><a href="#uv-cache-prune--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-prune--native-tls"><a href="#uv-cache-prune--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -8935,7 +9187,7 @@ uv cache prune [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-cache-prune--no-cache"><a href="#uv-cache-prune--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-cache-prune--no-cache"><a href="#uv-cache-prune--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-cache-prune--no-config"><a href="#uv-cache-prune--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -8943,6 +9195,11 @@ uv cache prune [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-cache-prune--no-managed-python"><a href="#uv-cache-prune--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-prune--no-progress"><a href="#uv-cache-prune--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -8965,23 +9222,10 @@ uv cache prune [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-cache-prune--python-preference"><a href="#uv-cache-prune--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-cache-prune--quiet"><a href="#uv-cache-prune--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-cache-prune--quiet"><a href="#uv-cache-prune--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-cache-prune--verbose"><a href="#uv-cache-prune--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -9011,7 +9255,7 @@ uv cache dir [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-cache-dir--allow-insecure-host"><a href="#uv-cache-dir--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-cache-dir--allow-insecure-host"><a href="#uv-cache-dir--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -9053,6 +9297,11 @@ uv cache dir [OPTIONS]
 
 </dd><dt id="uv-cache-dir--help"><a href="#uv-cache-dir--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-cache-dir--managed-python"><a href="#uv-cache-dir--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-dir--native-tls"><a href="#uv-cache-dir--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -9060,7 +9309,7 @@ uv cache dir [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-cache-dir--no-cache"><a href="#uv-cache-dir--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-cache-dir--no-cache"><a href="#uv-cache-dir--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-cache-dir--no-config"><a href="#uv-cache-dir--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -9068,6 +9317,11 @@ uv cache dir [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-cache-dir--no-managed-python"><a href="#uv-cache-dir--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-cache-dir--no-progress"><a href="#uv-cache-dir--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -9090,23 +9344,10 @@ uv cache dir [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-cache-dir--python-preference"><a href="#uv-cache-dir--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-cache-dir--quiet"><a href="#uv-cache-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-cache-dir--quiet"><a href="#uv-cache-dir--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-cache-dir--verbose"><a href="#uv-cache-dir--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -9150,7 +9391,7 @@ uv self update [OPTIONS] [TARGET_VERSION]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-self-update--allow-insecure-host"><a href="#uv-self-update--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-self-update--allow-insecure-host"><a href="#uv-self-update--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -9192,6 +9433,11 @@ uv self update [OPTIONS] [TARGET_VERSION]
 
 </dd><dt id="uv-self-update--help"><a href="#uv-self-update--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-self-update--managed-python"><a href="#uv-self-update--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-self-update--native-tls"><a href="#uv-self-update--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -9199,7 +9445,7 @@ uv self update [OPTIONS] [TARGET_VERSION]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-self-update--no-cache"><a href="#uv-self-update--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-self-update--no-cache"><a href="#uv-self-update--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-self-update--no-config"><a href="#uv-self-update--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -9207,6 +9453,11 @@ uv self update [OPTIONS] [TARGET_VERSION]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-self-update--no-managed-python"><a href="#uv-self-update--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-self-update--no-progress"><a href="#uv-self-update--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -9229,23 +9480,10 @@ uv self update [OPTIONS] [TARGET_VERSION]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-self-update--python-preference"><a href="#uv-self-update--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-self-update--quiet"><a href="#uv-self-update--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-self-update--quiet"><a href="#uv-self-update--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-self-update--token"><a href="#uv-self-update--token"><code>--token</code></a> <i>token</i></dt><dd><p>A GitHub token for authentication. A token is not required but can be used to reduce the chance of encountering rate limits</p>
 
@@ -9270,7 +9508,7 @@ uv version [OPTIONS]
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-version--allow-insecure-host"><a href="#uv-version--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-version--allow-insecure-host"><a href="#uv-version--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -9312,6 +9550,11 @@ uv version [OPTIONS]
 
 </dd><dt id="uv-version--help"><a href="#uv-version--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-version--managed-python"><a href="#uv-version--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-version--native-tls"><a href="#uv-version--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -9319,7 +9562,7 @@ uv version [OPTIONS]
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-version--no-cache"><a href="#uv-version--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-version--no-cache"><a href="#uv-version--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-version--no-config"><a href="#uv-version--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -9327,6 +9570,11 @@ uv version [OPTIONS]
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-version--no-managed-python"><a href="#uv-version--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-version--no-progress"><a href="#uv-version--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
 
 <p>For example, spinners or progress bars.</p>
@@ -9349,23 +9597,10 @@ uv version [OPTIONS]
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-version--python-preference"><a href="#uv-version--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-version--quiet"><a href="#uv-version--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-version--quiet"><a href="#uv-version--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-version--verbose"><a href="#uv-version--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 
@@ -9393,7 +9628,7 @@ uv generate-shell-completion [OPTIONS] <SHELL>
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-generate-shell-completion--allow-insecure-host"><a href="#uv-generate-shell-completion--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-generate-shell-completion--allow-insecure-host"><a href="#uv-generate-shell-completion--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -9408,6 +9643,16 @@ uv generate-shell-completion [OPTIONS] <SHELL>
 
 <p>See <code>--project</code> to only change the project root directory.</p>
 
+</dd><dt id="uv-generate-shell-completion--managed-python"><a href="#uv-generate-shell-completion--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
+</dd><dt id="uv-generate-shell-completion--no-managed-python"><a href="#uv-generate-shell-completion--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-generate-shell-completion--project"><a href="#uv-generate-shell-completion--project"><code>--project</code></a> <i>project</i></dt><dd><p>Run the command within the given project directory.</p>
 
 <p>All <code>pyproject.toml</code>, <code>uv.toml</code>, and <code>.python-version</code> files will be discovered by walking up the directory tree from the project root, as will the project&#8217;s virtual environment (<code>.venv</code>).</p>
@@ -9418,6 +9663,7 @@ uv generate-shell-completion [OPTIONS] <SHELL>
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
 </dd></dl>
 
 ## uv help
@@ -9436,7 +9682,7 @@ uv help [OPTIONS] [COMMAND]...
 
 <h3 class="cli-reference">Options</h3>
 
-<dl class="cli-reference"><dt id="uv-help--allow-insecure-host"><a href="#uv-help--allow-insecure-host"><code>--allow-insecure-host</code></a> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
+<dl class="cli-reference"><dt id="uv-help--allow-insecure-host"><a href="#uv-help--allow-insecure-host"><code>--allow-insecure-host</code></a>, <code>--trusted-host</code> <i>allow-insecure-host</i></dt><dd><p>Allow insecure connections to a host.</p>
 
 <p>Can be provided multiple times.</p>
 
@@ -9478,6 +9724,11 @@ uv help [OPTIONS] [COMMAND]...
 
 </dd><dt id="uv-help--help"><a href="#uv-help--help"><code>--help</code></a>, <code>-h</code></dt><dd><p>Display the concise help for this command</p>
 
+</dd><dt id="uv-help--managed-python"><a href="#uv-help--managed-python"><code>--managed-python</code></a></dt><dd><p>Require use of uv-managed Python versions.</p>
+
+<p>By default, uv prefers using Python versions it manages. However, it will use system Python versions if a uv-managed Python is not installed. This option disables use of system Python versions.</p>
+
+<p>May also be set with the <code>UV_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-help--native-tls"><a href="#uv-help--native-tls"><code>--native-tls</code></a></dt><dd><p>Whether to load TLS certificates from the platform&#8217;s native certificate store.</p>
 
 <p>By default, uv loads certificates from the bundled <code>webpki-roots</code> crate. The <code>webpki-roots</code> are a reliable set of trust roots from Mozilla, and including them in uv improves portability and performance (especially on macOS).</p>
@@ -9485,7 +9736,7 @@ uv help [OPTIONS] [COMMAND]...
 <p>However, in some cases, you may want to use the platform&#8217;s native certificate store, especially if you&#8217;re relying on a corporate trust root (e.g., for a mandatory proxy) that&#8217;s included in your system&#8217;s certificate store.</p>
 
 <p>May also be set with the <code>UV_NATIVE_TLS</code> environment variable.</p>
-</dd><dt id="uv-help--no-cache"><a href="#uv-help--no-cache"><code>--no-cache</code></a>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
+</dd><dt id="uv-help--no-cache"><a href="#uv-help--no-cache"><code>--no-cache</code></a>, <code>--no-cache-dir</code>, <code>-n</code></dt><dd><p>Avoid reading from or writing to the cache, instead using a temporary directory for the duration of the operation</p>
 
 <p>May also be set with the <code>UV_NO_CACHE</code> environment variable.</p>
 </dd><dt id="uv-help--no-config"><a href="#uv-help--no-config"><code>--no-config</code></a></dt><dd><p>Avoid discovering configuration files (<code>pyproject.toml</code>, <code>uv.toml</code>).</p>
@@ -9493,6 +9744,11 @@ uv help [OPTIONS] [COMMAND]...
 <p>Normally, configuration files are discovered in the current directory, parent directories, or user configuration directories.</p>
 
 <p>May also be set with the <code>UV_NO_CONFIG</code> environment variable.</p>
+</dd><dt id="uv-help--no-managed-python"><a href="#uv-help--no-managed-python"><code>--no-managed-python</code></a></dt><dd><p>Disable use of uv-managed Python versions.</p>
+
+<p>Instead, uv will search for a suitable Python version on the system.</p>
+
+<p>May also be set with the <code>UV_NO_MANAGED_PYTHON</code> environment variable.</p>
 </dd><dt id="uv-help--no-pager"><a href="#uv-help--no-pager"><code>--no-pager</code></a></dt><dd><p>Disable pager when printing help</p>
 
 </dd><dt id="uv-help--no-progress"><a href="#uv-help--no-progress"><code>--no-progress</code></a></dt><dd><p>Hide all progress outputs.</p>
@@ -9517,23 +9773,10 @@ uv help [OPTIONS] [COMMAND]...
 
 <p>This setting has no effect when used in the <code>uv pip</code> interface.</p>
 
-</dd><dt id="uv-help--python-preference"><a href="#uv-help--python-preference"><code>--python-preference</code></a> <i>python-preference</i></dt><dd><p>Whether to prefer uv-managed or system Python installations.</p>
+<p>May also be set with the <code>UV_PROJECT</code> environment variable.</p>
+</dd><dt id="uv-help--quiet"><a href="#uv-help--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Use quiet output.</p>
 
-<p>By default, uv prefers using Python versions it manages. However, it will use system Python installations if a uv-managed Python is not installed. This option allows prioritizing or ignoring system Python installations.</p>
-
-<p>May also be set with the <code>UV_PYTHON_PREFERENCE</code> environment variable.</p>
-<p>Possible values:</p>
-
-<ul>
-<li><code>only-managed</code>:  Only use managed Python installations; never use system Python installations</li>
-
-<li><code>managed</code>:  Prefer managed Python installations over system Python installations</li>
-
-<li><code>system</code>:  Prefer system Python installations over managed Python installations</li>
-
-<li><code>only-system</code>:  Only use system Python installations; never use managed Python installations</li>
-</ul>
-</dd><dt id="uv-help--quiet"><a href="#uv-help--quiet"><code>--quiet</code></a>, <code>-q</code></dt><dd><p>Do not print any output</p>
+<p>Repeating this option, e.g., <code>-qq</code>, will enable a silent mode in which uv will write no output to stdout.</p>
 
 </dd><dt id="uv-help--verbose"><a href="#uv-help--verbose"><code>--verbose</code></a>, <code>-v</code></dt><dd><p>Use verbose output.</p>
 

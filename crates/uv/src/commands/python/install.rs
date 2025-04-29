@@ -11,15 +11,13 @@ use owo_colors::OwoColorize;
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::{debug, trace};
 
-use uv_client::Connectivity;
 use uv_configuration::PreviewMode;
-use uv_configuration::TrustedHost;
 use uv_fs::Simplified;
 use uv_python::downloads::{self, DownloadResult, ManagedPythonDownload, PythonDownloadRequest};
 use uv_python::managed::{
     python_executable_dir, ManagedPythonInstallation, ManagedPythonInstallations,
 };
-use uv_python::platform::Libc;
+use uv_python::platform::{Arch, Libc};
 use uv_python::{
     PythonDownloads, PythonInstallationKey, PythonRequest, PythonVersionFile,
     VersionFileDiscoveryOptions, VersionFilePreference,
@@ -32,6 +30,7 @@ use crate::commands::python::{ChangeEvent, ChangeEventKind};
 use crate::commands::reporters::PythonDownloadReporter;
 use crate::commands::{elapsed, ExitStatus};
 use crate::printer::Printer;
+use crate::settings::NetworkSettings;
 
 #[derive(Debug, Clone)]
 struct InstallRequest {
@@ -59,10 +58,11 @@ impl InstallRequest {
         let download = match ManagedPythonDownload::from_request(&download_request) {
             Ok(download) => download,
             Err(downloads::Error::NoDownloadFound(request))
-                if request.libc().is_some_and(Libc::is_musl) =>
+                if request.libc().is_some_and(Libc::is_musl)
+                    && request.arch().is_some_and(Arch::is_arm) =>
             {
                 return Err(anyhow::anyhow!(
-                    "uv does not yet provide musl Python distributions. See https://github.com/astral-sh/uv/issues/6890 to track support."
+                    "uv does not yet provide musl Python distributions on aarch64."
                 ));
             }
             Err(err) => return Err(err.into()),
@@ -131,11 +131,9 @@ pub(crate) async fn install(
     force: bool,
     python_install_mirror: Option<String>,
     pypy_install_mirror: Option<String>,
+    network_settings: NetworkSettings,
     default: bool,
     python_downloads: PythonDownloads,
-    native_tls: bool,
-    connectivity: Connectivity,
-    allow_insecure_host: &[TrustedHost],
     no_config: bool,
     preview: PreviewMode,
     printer: Printer,
@@ -207,18 +205,20 @@ pub(crate) async fn install(
             Vec::with_capacity(existing_installations.len() + requests.len());
 
         for request in &requests {
-            if existing_installations.is_empty() {
+            let mut matching_installations = existing_installations
+                .iter()
+                .filter(|installation| request.matches_installation(installation))
+                .peekable();
+
+            if matching_installations.peek().is_none() {
                 debug!("No installation found for request `{}`", request.cyan());
                 unsatisfied.push(Cow::Borrowed(request));
             }
 
-            for installation in existing_installations
-                .iter()
-                .filter(|installation| request.matches_installation(installation))
-            {
+            for installation in matching_installations {
                 changelog.existing.insert(installation.key().clone());
                 if matches!(&request.request, &PythonRequest::Any) {
-                    // Construct a install request matching the existing installation
+                    // Construct an install request matching the existing installation
                     match InstallRequest::new(PythonRequest::Key(installation.into())) {
                         Ok(request) => {
                             debug!("Will reinstall `{}`", installation.key().green());
@@ -296,12 +296,13 @@ pub(crate) async fn install(
 
     // Download and unpack the Python versions concurrently
     let client = uv_client::BaseClientBuilder::new()
-        .connectivity(connectivity)
-        .native_tls(native_tls)
-        .allow_insecure_host(allow_insecure_host.to_vec())
+        .connectivity(network_settings.connectivity)
+        .native_tls(network_settings.native_tls)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone())
         .build();
     let reporter = PythonDownloadReporter::new(printer, downloads.len() as u64);
     let mut tasks = FuturesUnordered::new();
+
     for download in &downloads {
         tasks.push(async {
             (
@@ -462,7 +463,7 @@ pub(crate) async fn install(
                         event.key.bold(),
                     )?;
                 }
-            };
+            }
         }
 
         if preview.is_enabled() {
@@ -712,20 +713,11 @@ fn warn_if_not_on_path(bin: &Path) {
     if !Shell::contains_path(bin) {
         if let Some(shell) = Shell::from_env() {
             if let Some(command) = shell.prepend_path(bin) {
-                if shell.configuration_files().is_empty() {
-                    warn_user!(
-                        "`{}` is not on your PATH. To use the installed Python executable, run `{}`.",
-                        bin.simplified_display().cyan(),
-                        command.green()
-                    );
-                } else {
-                    // TODO(zanieb): Update when we add `uv python update-shell` to match `uv tool`
-                    warn_user!(
-                        "`{}` is not on your PATH. To use the installed Python executable, run `{}`.",
-                        bin.simplified_display().cyan(),
-                        command.green(),
-                    );
-                }
+                warn_user!(
+                    "`{}` is not on your PATH. To use the installed Python executable, run `{}`.",
+                    bin.simplified_display().cyan(),
+                    command.green(),
+                );
             } else {
                 warn_user!(
                     "`{}` is not on your PATH. To use the installed Python executable, add the directory to your PATH.",

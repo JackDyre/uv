@@ -6,11 +6,11 @@ use std::fmt::Write;
 use tracing::debug;
 
 use uv_cache::Cache;
-use uv_client::{BaseClientBuilder, Connectivity};
-use uv_configuration::{Concurrency, DryRun, PreviewMode, TrustedHost};
+use uv_client::BaseClientBuilder;
+use uv_configuration::{Concurrency, Constraints, DryRun, PreviewMode};
+use uv_distribution_types::Requirement;
 use uv_fs::CWD;
 use uv_normalize::PackageName;
-use uv_pypi_types::Requirement;
 use uv_python::{
     EnvironmentPreference, Interpreter, PythonDownloads, PythonInstallation, PythonPreference,
     PythonRequest,
@@ -18,6 +18,7 @@ use uv_python::{
 use uv_requirements::RequirementsSpecification;
 use uv_settings::{Combine, PythonInstallMirrors, ResolverInstallerOptions, ToolOptions};
 use uv_tool::InstalledTools;
+use uv_workspace::WorkspaceCache;
 
 use crate::commands::pip::loggers::{
     DefaultInstallLogger, SummaryResolveLogger, UpgradeInstallLogger,
@@ -30,22 +31,20 @@ use crate::commands::reporters::PythonDownloadReporter;
 use crate::commands::tool::common::remove_entrypoints;
 use crate::commands::{conjunction, tool::common::install_executables, ExitStatus};
 use crate::printer::Printer;
-use crate::settings::ResolverInstallerSettings;
+use crate::settings::{NetworkSettings, ResolverInstallerSettings};
 
 /// Upgrade a tool.
 pub(crate) async fn upgrade(
     names: Vec<String>,
     python: Option<String>,
     install_mirrors: PythonInstallMirrors,
-    connectivity: Connectivity,
     args: ResolverInstallerOptions,
     filesystem: ResolverInstallerOptions,
+    network_settings: NetworkSettings,
     python_preference: PythonPreference,
     python_downloads: PythonDownloads,
     installer_metadata: bool,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     cache: &Cache,
     printer: Printer,
     preview: PreviewMode,
@@ -81,9 +80,9 @@ pub(crate) async fn upgrade(
 
     let reporter = PythonDownloadReporter::single(printer);
     let client_builder = BaseClientBuilder::new()
-        .connectivity(connectivity)
-        .native_tls(native_tls)
-        .allow_insecure_host(allow_insecure_host.to_vec());
+        .connectivity(network_settings.connectivity)
+        .native_tls(network_settings.native_tls)
+        .allow_insecure_host(network_settings.allow_insecure_host.clone());
 
     let python_request = python.as_deref().map(PythonRequest::parse);
 
@@ -123,13 +122,11 @@ pub(crate) async fn upgrade(
             printer,
             &installed_tools,
             &args,
+            &network_settings,
             cache,
             &filesystem,
             installer_metadata,
-            connectivity,
             concurrency,
-            native_tls,
-            allow_insecure_host,
             preview,
         )
         .await;
@@ -216,13 +213,11 @@ async fn upgrade_tool(
     printer: Printer,
     installed_tools: &InstalledTools,
     args: &ResolverInstallerOptions,
+    network_settings: &NetworkSettings,
     cache: &Cache,
     filesystem: &ResolverInstallerOptions,
     installer_metadata: bool,
-    connectivity: Connectivity,
     concurrency: Concurrency,
-    native_tls: bool,
-    allow_insecure_host: &[TrustedHost],
     preview: PreviewMode,
 ) -> Result<UpgradeOutcome> {
     // Ensure the tool is installed.
@@ -273,6 +268,9 @@ async fn upgrade_tool(
     );
     let settings = ResolverInstallerSettings::from(options.clone());
 
+    let build_constraints =
+        Constraints::from_requirements(existing_tool_receipt.build_constraints().iter().cloned());
+
     // Resolve the requirements.
     let spec = RequirementsSpecification::from_overrides(
         existing_tool_receipt.requirements().to_vec(),
@@ -287,6 +285,7 @@ async fn upgrade_tool(
 
     // Initialize any shared state.
     let state = PlatformState::default();
+    let workspace_cache = WorkspaceCache::default();
 
     // Check if we need to create a new environment — if so, resolve it first, then
     // install the requested tool
@@ -297,13 +296,11 @@ async fn upgrade_tool(
         let resolution = resolve_environment(
             spec.into(),
             interpreter,
-            settings.as_ref().into(),
+            &settings.resolver,
+            network_settings,
             &state,
             Box::new(SummaryResolveLogger),
-            connectivity,
             concurrency,
-            native_tls,
-            allow_insecure_host,
             cache,
             printer,
             preview,
@@ -316,14 +313,13 @@ async fn upgrade_tool(
             environment,
             &resolution.into(),
             Modifications::Exact,
-            settings.as_ref().into(),
+            build_constraints,
+            (&settings).into(),
+            network_settings,
             &state,
             Box::new(DefaultInstallLogger),
             installer_metadata,
-            connectivity,
             concurrency,
-            native_tls,
-            allow_insecure_host,
             cache,
             printer,
             preview,
@@ -342,16 +338,16 @@ async fn upgrade_tool(
             environment,
             spec,
             Modifications::Exact,
+            build_constraints,
             &settings,
+            network_settings,
             &state,
             Box::new(SummaryResolveLogger),
             Box::new(UpgradeInstallLogger::new(name.clone())),
             installer_metadata,
-            connectivity,
             concurrency,
-            native_tls,
-            allow_insecure_host,
             cache,
+            workspace_cache,
             DryRun::Disabled,
             printer,
             preview,
@@ -388,6 +384,7 @@ async fn upgrade_tool(
             existing_tool_receipt.requirements().to_vec(),
             existing_tool_receipt.constraints().to_vec(),
             existing_tool_receipt.overrides().to_vec(),
+            existing_tool_receipt.build_constraints().to_vec(),
             printer,
         )?;
     }

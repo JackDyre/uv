@@ -4,12 +4,12 @@ use std::path::Path;
 use thiserror::Error;
 
 use uv_configuration::SourceStrategy;
-use uv_distribution_types::{GitSourceUrl, IndexLocations};
+use uv_distribution_types::{GitSourceUrl, IndexLocations, Requirement};
 use uv_normalize::{ExtraName, GroupName, PackageName};
 use uv_pep440::{Version, VersionSpecifiers};
 use uv_pypi_types::{HashDigests, ResolutionMetadata};
 use uv_workspace::dependency_groups::DependencyGroupError;
-use uv_workspace::WorkspaceError;
+use uv_workspace::{WorkspaceCache, WorkspaceError};
 
 pub use crate::metadata::build_requires::BuildRequires;
 pub use crate::metadata::lowering::LoweredRequirement;
@@ -46,10 +46,10 @@ pub struct Metadata {
     pub name: PackageName,
     pub version: Version,
     // Optional fields
-    pub requires_dist: Vec<uv_pypi_types::Requirement>,
+    pub requires_dist: Box<[Requirement]>,
     pub requires_python: Option<VersionSpecifiers>,
-    pub provides_extras: Vec<ExtraName>,
-    pub dependency_groups: BTreeMap<GroupName, Vec<uv_pypi_types::Requirement>>,
+    pub provides_extras: Box<[ExtraName]>,
+    pub dependency_groups: BTreeMap<GroupName, Box<[Requirement]>>,
     pub dynamic: bool,
 }
 
@@ -60,10 +60,8 @@ impl Metadata {
         Self {
             name: metadata.name,
             version: metadata.version,
-            requires_dist: metadata
-                .requires_dist
-                .into_iter()
-                .map(uv_pypi_types::Requirement::from)
+            requires_dist: Box::into_iter(metadata.requires_dist)
+                .map(Requirement::from)
                 .collect(),
             requires_python: metadata.requires_python,
             provides_extras: metadata.provides_extras,
@@ -80,6 +78,7 @@ impl Metadata {
         git_source: Option<&GitWorkspaceMember<'_>>,
         locations: &IndexLocations,
         sources: SourceStrategy,
+        cache: &WorkspaceCache,
     ) -> Result<Self, MetadataError> {
         // Lower the requirements.
         let requires_dist = uv_pypi_types::RequiresDist {
@@ -100,6 +99,7 @@ impl Metadata {
             git_source,
             locations,
             sources,
+            cache,
         )
         .await?;
 

@@ -1,3 +1,4 @@
+use std::fmt::Formatter;
 use std::hash::BuildHasherDefault;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -41,26 +42,30 @@ impl CredentialsCache {
     /// Return the credentials that should be used for a realm and username, if any.
     pub(crate) fn get_realm(&self, realm: Realm, username: Username) -> Option<Arc<Credentials>> {
         let realms = self.realms.read().unwrap();
-        let name = if let Some(username) = username.as_deref() {
-            format!("{username}@{realm}")
-        } else {
-            realm.to_string()
-        };
         let given_username = username.is_some();
         let key = (realm, username);
 
         let Some(credentials) = realms.get(&key).cloned() else {
-            trace!("No credentials in cache for realm {name}");
+            trace!(
+                "No credentials in cache for realm {}",
+                RealmUsername::from(key)
+            );
             return None;
         };
 
         if given_username && credentials.password().is_none() {
             // If given a username, don't return password-less credentials
-            trace!("No password in cache for realm {name}");
+            trace!(
+                "No password in cache for realm {}",
+                RealmUsername::from(key)
+            );
             return None;
         }
 
-        trace!("Found cached credentials for realm {name}");
+        trace!(
+            "Found cached credentials for realm {}",
+            RealmUsername::from(key)
+        );
         Some(credentials)
     }
 
@@ -214,25 +219,45 @@ impl TrieState {
     }
 }
 
+#[derive(Debug)]
+struct RealmUsername(Realm, Username);
+
+impl std::fmt::Display for RealmUsername {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let Self(realm, username) = self;
+        if let Some(username) = username.as_deref() {
+            write!(f, "{username}@{realm}")
+        } else {
+            write!(f, "{realm}")
+        }
+    }
+}
+
+impl From<(Realm, Username)> for RealmUsername {
+    fn from((realm, username): (Realm, Username)) -> Self {
+        Self(realm, username)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_trie() {
-        let credentials1 = Arc::new(Credentials::new(
+        let credentials1 = Arc::new(Credentials::basic(
             Some("username1".to_string()),
             Some("password1".to_string()),
         ));
-        let credentials2 = Arc::new(Credentials::new(
+        let credentials2 = Arc::new(Credentials::basic(
             Some("username2".to_string()),
             Some("password2".to_string()),
         ));
-        let credentials3 = Arc::new(Credentials::new(
+        let credentials3 = Arc::new(Credentials::basic(
             Some("username3".to_string()),
             Some("password3".to_string()),
         ));
-        let credentials4 = Arc::new(Credentials::new(
+        let credentials4 = Arc::new(Credentials::basic(
             Some("username4".to_string()),
             Some("password4".to_string()),
         ));
